@@ -1,0 +1,75 @@
+==================================================
+  RENTPOA - DEPLOYMENT PACKAGE
+==================================================
+
+This folder contains your complete RentPoa application ready for deployment!
+
+FILE INCLUDED:
+- index.html (Your complete app - 77KB)
+
+DEPLOYMENT OPTIONS:
+
+==================================================
+OPTION 1: NETLIFY DROP (EASIEST - RECOMMENDED)
+==================================================
+
+1. Download this entire folder to your computer
+2. Go to: https://app.netlify.com/drop
+3. Drag the index.html file (NOT the folder) into the drop zone
+4. Wait 10-20 seconds
+5. You'll get a live URL like: https://xyz123.netlify.app
+6. DONE! Your app is live!
+
+TO CHANGE SITE NAME:
+- Click "Site settings" in Netlify
+- Click "Change site name"
+- Enter: rentpoa-manager (or any name you want)
+- Your URL becomes: https://rentpoa-manager.netlify.app
+
+==================================================
+OPTION 2: VERCEL
+==================================================
+
+1. Go to: https://vercel.com/new
+2. Sign up (free)
+3. Click "Deploy" or drag index.html
+4. Done! Live in 30 seconds!
+
+==================================================
+OPTION 3: GITHUB PAGES
+==================================================
+
+1. Go to: https://github.com
+2. Create new repository called "rentpoa"
+3. Upload index.html file
+4. Go to Settings → Pages
+5. Select "main branch" as source
+6. Your site: https://yourusername.github.io/rentpoa
+
+==================================================
+TROUBLESHOOTING:
+==================================================
+
+If Netlify Drop shows nothing:
+- Make sure you're dragging the INDEX.HTML FILE, not the folder
+- Try using Chrome or Firefox browser
+- Make sure the file is less than 100MB (yours is only 77KB, so OK)
+- Try refreshing the Netlify Drop page
+
+If app doesn't work after deployment:
+- Your Supabase credentials are already embedded
+- Everything should work immediately
+- If issues, check browser console (F12)
+
+==================================================
+SUPPORT:
+==================================================
+
+Your app is connected to:
+- Supabase URL: https://ozczypkobtrocdeyujvw.supabase.co
+- All user data will be stored there
+- You can monitor users in Supabase Dashboard
+
+==================================================
+CREATED BY: CHARLES SOFTWARE 2025
+==================================================
