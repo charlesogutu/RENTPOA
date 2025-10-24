@@ -1,0 +1,1913 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>RentPoa - Property Management</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{--black:#0b0b0b;--red:#c0392b;--green:#27ae60;--blue:#3498db;--orange:#f39c12;--purple:#9b59b6;}
+  *{box-sizing:border-box}
+  body,html{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  
+  .loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:9999;}
+  .loading-overlay.show{display:flex;}
+  .spinner{border:4px solid rgba(255,255,255,0.3);border-top:4px solid #fff;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;}
+  @keyframes spin{0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)}}
+  
+  #loginScreen, #signupScreen{height:100vh;background:url("https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1600&q=80") center/cover no-repeat;display:flex;align-items:center;justify-content:center}
+  #signupScreen{display:none}
+  
+  .authCard{width:500px;background:rgba(0,0,0,0.85);padding:32px;border-radius:12px;color:#fff;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+  .authCard h2{margin:0 0 20px;font-size:24px}
+  .authCard input{width:100%;padding:12px;margin:10px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;font-size:14px}
+  .authCard input::placeholder{color:rgba(255,255,255,0.7)}
+  .authCard input:focus{outline:none;border-color:var(--blue);background:rgba(255,255,255,0.15)}
+  
+  .btn{background:var(--blue);color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-weight:600;margin:8px 4px;transition:all 0.3s ease;font-size:14px}
+  .btn:hover{background:#2980b9}
+  .btn.red{background:var(--red)}
+  .btn.red:hover{background:#a93226}
+  .btn.green{background:var(--green)}
+  .btn.green:hover{background:#229954}
+  .btn.orange{background:var(--orange)}
+  .btn.orange:hover{background:#d68910}
+  
+  .error, .success{padding:12px;border-radius:8px;margin:12px 0;font-weight:600;display:none}
+  .error{background:rgba(192,57,43,0.9);color:#fff}
+  .success{background:rgba(39,174,96,0.9);color:#fff}
+  
+  #app{display:none;height:100vh;overflow:hidden}
+  
+  .header{background:var(--black);color:#fff;padding:0;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+  .logo{font-weight:700;font-size:20px;padding:15px 20px}
+  
+  .user-info{display:flex;align-items:center;gap:15px;padding:15px 20px}
+  .logout-btn{background:transparent;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;transition:all 0.3s ease;font-size:12px}
+  .logout-btn:hover{background:rgba(255,255,255,0.1)}
+  
+  .trial-banner{background:linear-gradient(135deg, var(--orange), var(--red));color:#fff;padding:10px 20px;text-align:center;font-weight:600;box-shadow:0 2px 5px rgba(0,0,0,0.2);animation:pulse 2s infinite;}
+  @keyframes pulse{0%, 100%{opacity:1} 50%{opacity:0.8}}
+  
+  .subscription-badge{background:var(--green);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;}
+  .subscription-badge.trial{background:var(--orange);}
+  .subscription-badge.expired{background:var(--red);}
+  
+  .content{display:flex;height:calc(100vh - 60px)}
+  
+  .sidebar{width:250px;background:linear-gradient(180deg,#2c3e50 0%,#34495e 100%);overflow-y:auto}
+  .nav-item{padding:15px 20px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.1);transition:background 0.3s ease;color:rgba(255,255,255,0.8);font-weight:500}
+  .nav-item:hover{background:rgba(255,255,255,0.1);color:#fff}
+  .nav-item.active{background:var(--blue);color:#fff;border-left:4px solid #fff}
+  
+  #mainSection{flex:1;padding:25px;overflow-y:auto;background:#fff}
+  
+  .page{display:none}
+  .page.active{display:block}
+  
+  .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #dee2e6}
+  .section-title h2{margin:0;color:var(--black);font-weight:600}
+  
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);overflow:hidden;margin-bottom:25px}
+  th{background:var(--black);color:#fff;padding:15px;text-align:left;font-weight:600;font-size:14px}
+  td{padding:15px;border-bottom:1px solid #dee2e6;font-size:14px}
+  tr:hover{background:#f8f9fa}
+  
+  .actions{display:flex;gap:8px}
+  .edit, .del, .view{padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.3s ease}
+  .edit{background:var(--blue);color:#fff}
+  .edit:hover{background:#2980b9}
+  .del{background:var(--red);color:#fff}
+  .del:hover{background:#a93226}
+  .view{background:var(--green);color:#fff}
+  .view:hover{background:#229954}
+  
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:30px}
+  .stat-card{background:#fff;padding:25px;border-radius:12px;box-shadow:0 2px 15px rgba(0,0,0,0.1);border-left:4px solid var(--blue);transition:transform 0.3s ease}
+  .stat-card:hover{transform:translateY(-2px)}
+  .stat-value{font-size:32px;font-weight:700;color:var(--black);margin-bottom:5px}
+  .stat-label{color:#666;font-weight:600;text-transform:uppercase;font-size:12px;letter-spacing:1px}
+  
+  .status-badge{padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600;text-transform:uppercase;}
+  .status-pending{background:#ffeaa7;color:#e17055;}
+  .status-paid{background:#55efc4;color:#00b894;}
+  .status-overdue{background:#fab1a0;color:#e74c3c;}
+  
+  .payment-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center;}
+  .payment-modal.show{display:flex;}
+  .payment-content{background:#fff;padding:40px;border-radius:16px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;}
+  @keyframes slideIn{from{transform:translateY(-50px);opacity:0} to{transform:translateY(0);opacity:1}}
+  
+  .payment-header{text-align:center;margin-bottom:30px;}
+  .payment-header h2{margin:0 0 10px;color:var(--black);font-size:28px;}
+  .payment-header p{margin:0;color:#666;}
+  
+  .payment-options{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;}
+  .payment-option{border:3px solid #dee2e6;border-radius:12px;padding:25px;text-align:center;cursor:pointer;transition:all 0.3s ease;}
+  .payment-option:hover{border-color:var(--blue);transform:translateY(-2px);}
+  .payment-option.selected{border-color:var(--green);background:#f0fff4;}
+  .payment-option .price{font-size:32px;font-weight:700;color:var(--black);margin:10px 0;}
+  .payment-option .period{color:#666;font-weight:600;text-transform:uppercase;font-size:12px;}
+  .payment-option .save{background:var(--green);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;margin-top:8px;display:inline-block;}
+  
+  .mpesa-instructions{background:#f8f9fa;border-radius:12px;padding:25px;margin-bottom:25px;}
+  .mpesa-instructions h3{margin:0 0 20px;color:var(--black);display:flex;align-items:center;gap:10px;}
+  .mpesa-instructions ol{margin:10px 0;padding-left:25px;}
+  .mpesa-instructions li{margin:10px 0;color:#333;line-height:1.6;}
+  .mpesa-instructions .highlight{background:var(--green);color:#fff;padding:8px 12px;border-radius:6px;font-weight:700;display:inline-block;margin:5px 0;}
+  
+  .payment-form{background:#fff;border-radius:8px;margin-top:20px;}
+  .payment-form input{width:100%;padding:12px;margin:10px 0;border-radius:8px;border:1px solid #dee2e6;font-size:14px;}
+  .payment-form input:focus{outline:none;border-color:var(--blue);}
+  
+  .copyright-footer{position:fixed;bottom:0;right:0;background:rgba(0,0,0,0.8);color:#fff;padding:10px 15px;font-size:12px;border-radius:8px 0 0 0;z-index:1000;font-weight:500}
+  
+  @media (max-width:768px){
+    .content{flex-direction:column}
+    .sidebar{width:100%;height:auto}
+    .stats-grid{grid-template-columns:1fr}
+    .payment-options{grid-template-columns:1fr}
+  }
+</style>
+</head>
+
+<body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="loginScreen">
+    <div class="authCard">
+      <h2>🏠 RentPoa Login</h2>
+      <div id="loginError" class="error"></div>
+      <input type="email" id="loginEmail" placeholder="Email" />
+      <input type="password" id="loginPassword" placeholder="Password" />
+      <button class="btn" onclick="login()">Sign In</button>
+      <p style="margin-top:20px;color:rgba(255,255,255,0.7)">
+        Don't have an account? <a href="#" onclick="showSignup()" style="color:var(--blue)">Sign up</a>
+      </p>
+    </div>
+  </div>
+
+  <div id="signupScreen">
+    <div class="authCard">
+      <h2>🏠 Create Account</h2>
+      <div id="signupError" class="error"></div>
+      <div id="signupSuccess" class="success"></div>
+      <input type="text" id="signupName" placeholder="Full Name" />
+      <input type="email" id="signupEmail" placeholder="Email" />
+      <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" />
+      <p style="font-size:13px;color:rgba(255,255,255,0.8);margin:15px 0;">
+        ⚡ Start with 1 hour FREE trial<br>
+        Then Ksh 3,000/month or Ksh 20,000/year
+      </p>
+      <button class="btn" onclick="signup()">Create Account & Start Trial</button>
+      <p style="margin-top:20px;color:rgba(255,255,255,0.7)">
+        Already have an account? <a href="#" onclick="showLogin()" style="color:var(--blue)">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="header">
+      <div class="logo">🏠 RentPoa</div>
+      <div class="user-info">
+        <span class="subscription-badge" id="subscriptionBadge">FREE TRIAL</span>
+        <span id="userName"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="trial-banner" id="trialBanner" style="display:none;">
+      ⏰ Free Trial: <span id="trialTimer"></span> remaining
+    </div>
+
+    <div class="content">
+      <div class="sidebar">
+        <div class="nav-item active" onclick="showSection('dashboard')">📊 Dashboard</div>
+        <div class="nav-item" onclick="showSection('housetypes')">🏠 House Types</div>
+        <div class="nav-item" onclick="showSection('properties')">🏢 Properties</div>
+        <div class="nav-item" onclick="showSection('tenants')">👥 Tenants</div>
+        <div class="nav-item" onclick="showSection('invoices')">📄 Invoices</div>
+        <div class="nav-item" onclick="showSection('payments')">💰 Payments</div>
+      </div>
+
+      <div id="mainSection">
+        <div id="dashboard" class="page active">
+          <div class="section-title">
+            <h2>Dashboard</h2>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="totalProperties">0</div>
+              <div class="stat-label">Total Properties</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="totalTenants">0</div>
+              <div class="stat-label">Total Tenants</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="monthlyIncome">Ksh 0</div>
+              <div class="stat-label">Monthly Income</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="pendingInvoices">0</div>
+              <div class="stat-label">Pending Invoices</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="housetypes" class="page">
+          <div class="section-title">
+            <h2>House Types</h2>
+            <button class="btn" onclick="showAddHouseTypeForm()">+ Add House Type</button>
+          </div>
+          
+          <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#333;">🏢 Property Occupancy Overview</h3>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:15px;align-items:end;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Select Property</label>
+                <select id="propertyOccupancyFilter" onchange="loadPropertyOccupancy()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All Properties</option>
+                </select>
+              </div>
+              <button class="btn orange" onclick="clearOccupancyFilter()" style="padding:10px 20px;">Show All</button>
+            </div>
+            <div id="occupancyStats" style="margin-top:15px;"></div>
+          </div>
+          
+          <table id="houseTypesTable">
+            <thead>
+              <tr>
+                <th>Type Name</th>
+                <th>Rent Amount</th>
+                <th>Description</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="properties" class="page">
+          <div class="section-title">
+            <h2>Properties</h2>
+            <button class="btn" onclick="showAddPropertyForm()">+ Add Property</button>
+          </div>
+          <table id="propertiesTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Location</th>
+                <th>House Type</th>
+                <th>Total Houses</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tenants" class="page">
+          <div class="section-title">
+            <h2>Tenants</h2>
+            <button class="btn" onclick="showAddTenantForm()">+ Add Tenant</button>
+          </div>
+          
+          <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#333;">🔍 Filter Tenants</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:15px;align-items:end;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Property</label>
+                <select id="filterProperty" onchange="filterTenants()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All Properties</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">House Type</label>
+                <select id="filterHouseType" onchange="filterTenants()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All House Types</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Search Tenant</label>
+                <input type="text" id="filterTenantName" onkeyup="filterTenants()" placeholder="Search by name..." style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+              </div>
+              <button class="btn orange" onclick="clearTenantFilters()" style="padding:10px 20px;">Clear Filters</button>
+            </div>
+            <div id="filterStats" style="margin-top:15px;padding:12px;background:#fff;border-radius:6px;font-size:13px;color:#666;font-weight:600;"></div>
+          </div>
+          
+          <table id="tenantsTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Property</th>
+                <th>House Type</th>
+                <th>House Number</th>
+                <th>Rent</th>
+                <th>Move-in Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="invoices" class="page">
+          <div class="section-title">
+            <h2>Invoices</h2>
+            <div>
+              <button class="btn" onclick="generateInvoices()">Generate All Invoices</button>
+              <button class="btn green" onclick="exportInvoicesData()">Export All Data</button>
+            </div>
+          </div>
+          
+          <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#333;">📋 Generate Invoice for Specific Tenant</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:15px;align-items:end;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Property</label>
+                <select id="invoiceFilterProperty" onchange="updateInvoiceHouseTypes()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select Property</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">House Type</label>
+                <select id="invoiceFilterHouseType" onchange="updateInvoiceTenants()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select House Type</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Tenant</label>
+                <select id="invoiceFilterTenant" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select Tenant</option>
+                </select>
+              </div>
+              <button class="btn" onclick="generateSingleInvoice()" style="padding:10px 20px;">Generate Invoice</button>
+              <button class="btn green" onclick="exportSingleInvoicePDF()" style="padding:10px 20px;">Export PDF</button>
+            </div>
+            <div id="invoiceFilterInfo" style="margin-top:15px;padding:12px;background:#fff;border-radius:6px;font-size:13px;color:#666;font-weight:600;"></div>
+          </div>
+          
+          <table id="invoicesTable">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Tenant</th>
+                <th>House</th>
+                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="payments" class="page">
+          <div class="section-title">
+            <h2>Payments</h2>
+            <div>
+              <button class="btn" onclick="showRecordPaymentForm()">+ Record Payment</button>
+              <button class="btn green" onclick="exportPaymentsData()">Export Data</button>
+            </div>
+          </div>
+          <table id="paymentsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Tenant</th>
+                <th>House</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-modal" id="paymentModal">
+    <div class="payment-content">
+      <div class="payment-header">
+        <h2>💳 Activate Your Subscription</h2>
+        <p>Choose your plan and complete payment via M-Pesa</p>
+      </div>
+
+      <div class="payment-options">
+        <div class="payment-option" onclick="selectPlan('monthly')" id="monthlyPlan">
+          <div class="period">Monthly</div>
+          <div class="price">Ksh 3,000</div>
+          <small style="color:#666;">Billed monthly</small>
+        </div>
+        <div class="payment-option" onclick="selectPlan('yearly')" id="yearlyPlan">
+          <div class="period">Yearly</div>
+          <div class="price">Ksh 20,000</div>
+          <div class="save">SAVE Ksh 16,000!</div>
+          <small style="color:#666;">Billed annually</small>
+        </div>
+      </div>
+
+      <div class="mpesa-instructions">
+        <h3>📱 M-Pesa Payment Instructions</h3>
+        <ol>
+          <li>Go to <strong>M-Pesa Menu</strong> on your phone</li>
+          <li>Select <strong>Send Money</strong></li>
+          <li>Enter Phone Number: <span class="highlight">0715595646</span></li>
+          <li>Enter Amount: <span class="highlight" id="selectedAmount">Ksh 3,000</span></li>
+          <li>Confirm recipient name: <span class="highlight">DAISY SIMIYU</span></li>
+          <li>Enter your M-Pesa PIN and send</li>
+          <li>You will receive a confirmation SMS with transaction ID</li>
+          <li>Enter the transaction details below to activate</li>
+        </ol>
+      </div>
+
+      <div class="payment-form">
+        <input type="text" id="mpesaPhone" placeholder="Your M-Pesa Phone Number (e.g., 0712345678)" required />
+        <input type="text" id="mpesaTransactionId" placeholder="M-Pesa Transaction ID (e.g., QH12ABC456)" required />
+        <input type="text" id="mpesaConfirmName" placeholder="Confirmation Name (should be DAISY SIMIYU)" value="DAISY SIMIYU" required />
+        
+        <button class="btn green" onclick="submitPayment()" style="width:100%;margin-top:10px;">
+          ✔ Confirm Payment & Activate
+        </button>
+      </div>
+
+      <p style="text-align:center;margin-top:20px;color:#666;font-size:13px;">
+        🔒 Your payment will be verified and subscription activated within minutes.
+      </p>
+    </div>
+  </div>
+
+  <div class="copyright-footer">
+    CHARLES SOFTWARE2025
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://ozczypkobtrocdeyujvw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96Y3p5cGtvYnRyb2NkZXl1anZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2OTg0MjgsImV4cCI6MjA3NjI3NDQyOH0.EFa_7KzbAxxg5Oc5JoOX6q9Jf6BQ0sZAfQEWlKTQJVo';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let userSubscription = null;
+let selectedPaymentPlan = 'monthly';
+let trialCheckInterval = null;
+
+function showLoading() {
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+function showError(elementId, message) {
+  const errorElement = document.getElementById(elementId);
+  errorElement.textContent = message;
+  errorElement.style.display = 'block';
+  setTimeout(() => errorElement.style.display = 'none', 5000);
+}
+
+function showSuccess(elementId, message) {
+  const successElement = document.getElementById(elementId);
+  successElement.textContent = message;
+  successElement.style.display = 'block';
+  setTimeout(() => successElement.style.display = 'none', 5000);
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  if (!email || !password) {
+    showError('loginError', 'Please fill in all fields');
+    return;
+  }
+  
+  try {
+    showLoading();
+    const { data, error } = await supabase.auth.signInWithPassword({email, password});
+    if (error) throw error;
+  } catch (error) {
+    showError('loginError', error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function signup() {
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
+  
+  if (!name || !email || !password) {
+    showError('signupError', 'Please fill in all fields');
+    return;
+  }
+  
+  if (password.length < 6) {
+    showError('signupError', 'Password must be at least 6 characters');
+    return;
+  }
+  
+  try {
+    showLoading();
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {data: {name: name}}
+    });
+    
+    if (error) throw error;
+    showSuccess('signupSuccess', 'Account created! Check your email for verification.');
+    
+  } catch (error) {
+    showError('signupError', error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function logout() {
+  try {
+    if (trialCheckInterval) clearInterval(trialCheckInterval);
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('signupScreen').style.display = 'none';
+}
+
+function showSignup() {
+  document.getElementById('signupScreen').style.display = 'flex';
+  document.getElementById('loginScreen').style.display = 'none';
+}
+
+async function checkSubscription() {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    if (!data) {
+      await createTrialSubscription();
+      return;
+    }
+    
+    userSubscription = data;
+    updateSubscriptionUI();
+    
+    const now = new Date();
+    const trialExpires = new Date(data.trial_expires_at);
+    const subscriptionExpires = data.subscription_expires_at ? new Date(data.subscription_expires_at) : null;
+    
+    if (data.subscription_status === 'trial' && now > trialExpires) {
+      showPaymentModal();
+      return;
+    }
+    
+    if (data.subscription_status === 'active' && subscriptionExpires && now > subscriptionExpires) {
+      await updateSubscriptionStatus('expired');
+      showPaymentModal();
+      return;
+    }
+    
+    if (data.subscription_status === 'trial') {
+      startTrialTimer();
+    }
+    
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+  }
+}
+
+async function createTrialSubscription() {
+  try {
+    const now = new Date();
+    const trialExpires = new Date(now.getTime() + (60 * 60 * 1000));
+    
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert([{
+        user_id: currentUser.id,
+        trial_start_time: now.toISOString(),
+        trial_expires_at: trialExpires.toISOString(),
+        subscription_status: 'trial'
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    userSubscription = data;
+    updateSubscriptionUI();
+    startTrialTimer();
+    
+  } catch (error) {
+    console.error('Error creating trial:', error);
+  }
+}
+
+function startTrialTimer() {
+  if (trialCheckInterval) clearInterval(trialCheckInterval);
+  
+  trialCheckInterval = setInterval(() => {
+    if (!userSubscription || userSubscription.subscription_status !== 'trial') {
+      clearInterval(trialCheckInterval);
+      return;
+    }
+    
+    const now = new Date();
+    const trialExpires = new Date(userSubscription.trial_expires_at);
+    const timeLeft = trialExpires - now;
+    
+    if (timeLeft <= 0) {
+      clearInterval(trialCheckInterval);
+      showPaymentModal();
+      return;
+    }
+    
+    const minutes = Math.floor(timeLeft / 60000);
+    const seconds = Math.floor((timeLeft % 60000) / 1000);
+    
+    document.getElementById('trialTimer').textContent = `${minutes}m ${seconds}s`;
+    document.getElementById('trialBanner').style.display = 'block';
+  }, 1000);
+}
+
+function updateSubscriptionUI() {
+  const badge = document.getElementById('subscriptionBadge');
+  
+  if (!userSubscription) return;
+  
+  if (userSubscription.subscription_status === 'trial') {
+    badge.textContent = 'FREE TRIAL';
+    badge.className = 'subscription-badge trial';
+  } else if (userSubscription.subscription_status === 'active') {
+    badge.textContent = userSubscription.subscription_type === 'monthly' ? 'MONTHLY' : 'YEARLY';
+    badge.className = 'subscription-badge';
+    document.getElementById('trialBanner').style.display = 'none';
+  } else {
+    badge.textContent = 'EXPIRED';
+    badge.className = 'subscription-badge expired';
+  }
+}
+
+function showPaymentModal() {
+  document.getElementById('paymentModal').classList.add('show');
+  selectPlan('monthly');
+}
+
+function selectPlan(plan) {
+  selectedPaymentPlan = plan;
+  
+  document.getElementById('monthlyPlan').classList.remove('selected');
+  document.getElementById('yearlyPlan').classList.remove('selected');
+  
+  if (plan === 'monthly') {
+    document.getElementById('monthlyPlan').classList.add('selected');
+    document.getElementById('selectedAmount').textContent = 'Ksh 3,000';
+  } else {
+    document.getElementById('yearlyPlan').classList.add('selected');
+    document.getElementById('selectedAmount').textContent = 'Ksh 20,000';
+  }
+}
+
+async function submitPayment() {
+  const phone = document.getElementById('mpesaPhone').value;
+  const transactionId = document.getElementById('mpesaTransactionId').value;
+  const confirmName = document.getElementById('mpesaConfirmName').value;
+  
+  if (!phone || !transactionId || !confirmName) {
+    alert('Please fill in all payment details');
+    return;
+  }
+  
+  if (confirmName.toUpperCase() !== 'DAISY SIMIYU') {
+    alert('Confirmation name must be DAISY SIMIYU');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const amount = selectedPaymentPlan === 'monthly' ? 3000 : 20000;
+    const now = new Date();
+    const expiresAt = new Date();
+    
+    if (selectedPaymentPlan === 'monthly') {
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+    } else {
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    }
+    
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        subscription_type: selectedPaymentPlan,
+        subscription_status: 'active',
+        subscription_expires_at: expiresAt.toISOString(),
+        mpesa_phone: phone,
+        mpesa_transaction_id: transactionId,
+        mpesa_confirmation_name: confirmName,
+        amount_paid: amount,
+        payment_verified: true,
+        payment_date: now.toISOString()
+      })
+      .eq('user_id', currentUser.id);
+    
+    if (error) throw error;
+    
+    document.getElementById('paymentModal').classList.remove('show');
+    alert('✅ Payment confirmed! Your subscription is now active.');
+    
+    await checkSubscription();
+    
+  } catch (error) {
+    console.error('Error submitting payment:', error);
+    alert('Error processing payment: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function updateSubscriptionStatus(status) {
+  try {
+    await supabase
+      .from('subscriptions')
+      .update({subscription_status: status})
+      .eq('user_id', currentUser.id);
+  } catch (error) {
+    console.error('Error updating subscription:', error);
+  }
+}
+
+function showSection(sectionName) {
+  document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  
+  document.getElementById(sectionName).classList.add('active');
+  event.target.classList.add('active');
+  
+  if (sectionName === 'dashboard') loadDashboard();
+  else if (sectionName === 'housetypes') loadHouseTypes();
+  else if (sectionName === 'properties') loadProperties();
+  else if (sectionName === 'tenants') loadTenants();
+  else if (sectionName === 'invoices') loadInvoices();
+  else if (sectionName === 'payments') loadPayments();
+}
+
+async function loadDashboard() {
+  try {
+    showLoading();
+    const { data: properties } = await supabase.from('properties').select('*').eq('user_id', currentUser.id);
+    const { data: tenants } = await supabase.from('tenants').select('*').eq('user_id', currentUser.id);
+    const { data: pendingInv } = await supabase.from('invoices').select('*').eq('user_id', currentUser.id).eq('status', 'Pending');
+    
+    const monthlyIncome = tenants?.reduce((sum, t) => sum + parseFloat(t.rent || 0), 0) || 0;
+    
+    document.getElementById('totalProperties').textContent = properties?.length || 0;
+    document.getElementById('totalTenants').textContent = tenants?.length || 0;
+    document.getElementById('monthlyIncome').textContent = `Ksh ${monthlyIncome.toLocaleString()}`;
+    document.getElementById('pendingInvoices').textContent = pendingInv?.length || 0;
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    hideLoading();
+  }
+}
+
+let propertyOccupancyData = [];
+
+async function loadHouseTypes() {
+  try {
+    showLoading();
+    await populatePropertyOccupancyDropdown();
+    const { data, error } = await supabase.from('house_types').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    
+    const tbody = document.querySelector('#houseTypesTable tbody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #666;">No house types found. Click "+ Add House Type" to get started.<br><small>Examples: 1 Bedroom, 2 Bedroom, Studio, Bedsitter</small></td></tr>';
+      return;
+    }
+    
+    data.forEach(ht => {
+      tbody.innerHTML += `<tr><td><strong>${ht.type_name}</strong></td><td><strong style="color: var(--green);">Ksh ${Number(ht.rent_amount).toLocaleString()}</strong></td><td>${ht.description || 'N/A'}</td><td class="actions"><button class="edit" onclick="editHouseType('${ht.id}')">Edit</button><button class="del" onclick="deleteHouseType('${ht.id}')">Delete</button></td></tr>`;
+    });
+  } catch (error) {
+    alert('Error loading house types: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function populatePropertyOccupancyDropdown() {
+  try {
+    const { data: properties } = await supabase.from('properties').select('id, name, houses, house_type_id, house_types(type_name)').eq('user_id', currentUser.id).order('name');
+    
+    const propertySelect = document.getElementById('propertyOccupancyFilter');
+    propertySelect.innerHTML = '<option value="">All Properties</option>';
+    
+    if (properties) {
+      properties.forEach(prop => {
+        const houseType = prop.house_types?.type_name || 'N/A';
+        propertySelect.innerHTML += `<option value="${prop.id}">${prop.name} - ${houseType} (${prop.houses} units)</option>`;
+      });
+    }
+  } catch (error) {
+    console.error('Error loading properties:', error);
+  }
+}
+
+async function loadPropertyOccupancy() {
+  const propertyId = document.getElementById('propertyOccupancyFilter').value;
+  
+  try {
+    showLoading();
+    
+    let propertiesQuery = supabase
+      .from('properties')
+      .select('id, name, houses, location, house_type_id, house_types(type_name, rent_amount)')
+      .eq('user_id', currentUser.id);
+    
+    if (propertyId) {
+      propertiesQuery = propertiesQuery.eq('id', propertyId);
+    }
+    
+    const { data: properties, error: propError } = await propertiesQuery;
+    if (propError) throw propError;
+    
+    const { data: tenants, error: tenantError } = await supabase
+      .from('tenants')
+      .select('property_id, house_number')
+      .eq('user_id', currentUser.id);
+    if (tenantError) throw tenantError;
+    
+    const occupancyHtml = properties.map(property => {
+      const occupiedHouses = tenants.filter(t => t.property_id === property.id);
+      const occupiedCount = occupiedHouses.length;
+      const vacantCount = property.houses - occupiedCount;
+      const occupancyRate = property.houses > 0 ? ((occupiedCount / property.houses) * 100).toFixed(1) : 0;
+      
+      const houseTypeName = property.house_types?.type_name || 'N/A';
+      const rentAmount = property.house_types?.rent_amount || 0;
+      
+      const occupiedHouseNumbers = occupiedHouses.map(t => t.house_number).sort();
+      const allHouseNumbers = Array.from({length: property.houses}, (_, i) => `${i + 1}`);
+      const vacantHouseNumbers = allHouseNumbers.filter(num => !occupiedHouseNumbers.includes(num));
+      
+      return `
+        <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px;">
+            <div>
+              <h4 style="margin:0 0 5px;font-size:18px;color:#333;">🏢 ${property.name}</h4>
+              <p style="margin:0;color:#666;font-size:13px;">📍 ${property.location} | 🏠 ${houseTypeName} | 💰 Ksh ${Number(rentAmount).toLocaleString()}/month</p>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:24px;font-weight:700;color:${occupancyRate >= 80 ? 'var(--green)' : occupancyRate >= 50 ? 'var(--orange)' : 'var(--red)'}">${occupancyRate}%</div>
+              <div style="font-size:11px;color:#666;text-transform:uppercase;">Occupancy</div>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
+            <div style="background:#f8f9fa;padding:15px;border-radius:6px;text-align:center;">
+              <div style="font-size:28px;font-weight:700;color:#333;">${property.houses}</div>
+              <div style="font-size:12px;color:#666;font-weight:600;">TOTAL UNITS</div>
+            </div>
+            <div style="background:#d5f4e6;padding:15px;border-radius:6px;text-align:center;">
+              <div style="font-size:28px;font-weight:700;color:var(--green);">${occupiedCount}</div>
+              <div style="font-size:12px;color:#666;font-weight:600;">OCCUPIED</div>
+            </div>
+            <div style="background:#ffe5e5;padding:15px;border-radius:6px;text-align:center;">
+              <div style="font-size:28px;font-weight:700;color:var(--red);">${vacantCount}</div>
+              <div style="font-size:12px;color:#666;font-weight:600;">VACANT</div>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+            <div>
+              <div style="font-weight:600;margin-bottom:8px;color:#333;font-size:13px;">✅ OCCUPIED UNITS:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${occupiedHouseNumbers.length > 0 ? occupiedHouseNumbers.map(num => 
+                  `<span style="background:var(--green);color:#fff;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;">House ${num}</span>`
+                ).join('') : '<span style="color:#999;font-size:12px;">None</span>'}
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:600;margin-bottom:8px;color:#333;font-size:13px;">🔓 VACANT UNITS:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${vacantHouseNumbers.length > 0 ? vacantHouseNumbers.map(num => 
+                  `<span onclick="addTenantFromVacantUnit('${property.id}', '${num}')" style="background:var(--red);color:#fff;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 4px 8px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';">House ${num}</span>`
+                ).join('') : '<span style="color:#999;font-size:12px;">None</span>'}
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin-top:15px;padding-top:15px;border-top:1px solid #dee2e6;">
+            <div style="font-size:13px;color:#666;">
+              💵 <strong>Monthly Income:</strong> Ksh ${(occupiedCount * Number(rentAmount)).toLocaleString()} | 
+              💸 <strong>Potential Income (if full):</strong> Ksh ${(property.houses * Number(rentAmount)).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    const statsDiv = document.getElementById('occupancyStats');
+    if (properties.length === 0) {
+      statsDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No properties found. Add properties first!</div>';
+    } else {
+      const totalUnits = properties.reduce((sum, p) => sum + p.houses, 0);
+      const totalOccupied = properties.reduce((sum, p) => {
+        return sum + tenants.filter(t => t.property_id === p.id).length;
+      }, 0);
+      const totalVacant = totalUnits - totalOccupied;
+      const overallRate = totalUnits > 0 ? ((totalOccupied / totalUnits) * 100).toFixed(1) : 0;
+      
+      statsDiv.innerHTML = `
+        <div style="background:#fff;padding:15px;border-radius:6px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:15px;">
+            <div style="text-align:center;">
+              <div style="font-size:24px;font-weight:700;color:#333;">${properties.length}</div>
+              <div style="font-size:11px;color:#666;font-weight:600;">PROPERTIES</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:24px;font-weight:700;color:#333;">${totalUnits}</div>
+              <div style="font-size:11px;color:#666;font-weight:600;">TOTAL UNITS</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:24px;font-weight:700;color:var(--green);">${totalOccupied}</div>
+              <div style="font-size:11px;color:#666;font-weight:600;">OCCUPIED</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:24px;font-weight:700;color:var(--red);">${totalVacant}</div>
+              <div style="font-size:11px;color:#666;font-weight:600;">VACANT</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dee2e6;text-align:center;">
+            <span style="font-size:13px;color:#666;font-weight:600;">Overall Occupancy Rate: </span>
+            <span style="font-size:18px;font-weight:700;color:${overallRate >= 80 ? 'var(--green)' : overallRate >= 50 ? 'var(--orange)' : 'var(--red)'}">${overallRate}%</span>
+          </div>
+        </div>
+        ${occupancyHtml}
+      `;
+    }
+    
+  } catch (error) {
+    console.error('Error loading occupancy:', error);
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function clearOccupancyFilter() {
+  document.getElementById('propertyOccupancyFilter').value = '';
+  loadPropertyOccupancy();
+}
+
+function addTenantFromVacantUnit(propertyId, houseNumber) {
+  showSection('tenants');
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  document.querySelectorAll('.nav-item')[3].classList.add('active');
+  
+  setTimeout(() => {
+    showAddTenantForm(propertyId, houseNumber);
+  }, 100);
+}
+
+function showAddHouseTypeForm() {
+  const typeName = prompt('House Type Name:\n(e.g., "1 Bedroom", "2 Bedroom", "Studio", "Bedsitter")');
+  if (!typeName) return;
+  const rentAmount = prompt('Monthly Rent Amount (Ksh):');
+  if (!rentAmount) return;
+  const description = prompt('Description (optional):\n(e.g., "Spacious with balcony")');
+  addHouseType(typeName, parseFloat(rentAmount), description);
+}
+
+async function addHouseType(typeName, rentAmount, description) {
+  try {
+    showLoading();
+    const { error } = await supabase.from('house_types').insert([{type_name: typeName, rent_amount: rentAmount, description: description || null, user_id: currentUser.id}]);
+    if (error) throw error;
+    alert('House type added successfully!');
+    loadHouseTypes();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editHouseType(id) {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('house_types').select('*').eq('id', id).eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    hideLoading();
+    
+    const typeName = prompt('House Type Name:', data.type_name);
+    if (!typeName) return;
+    const rentAmount = prompt('Monthly Rent Amount (Ksh):', data.rent_amount);
+    if (!rentAmount) return;
+    const description = prompt('Description (optional):', data.description || '');
+    
+    showLoading();
+    const { error: updateError } = await supabase.from('house_types').update({type_name: typeName, rent_amount: parseFloat(rentAmount), description: description || null}).eq('id', id).eq('user_id', currentUser.id);
+    if (updateError) throw updateError;
+    alert('House type updated successfully!');
+    loadHouseTypes();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deleteHouseType(id) {
+  if (!confirm('Are you sure you want to delete this house type?')) return;
+  try {
+    showLoading();
+    const { error } = await supabase.from('house_types').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('House type deleted successfully!');
+    loadHouseTypes();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function loadProperties() {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('properties').select('*, house_types (type_name)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    
+    const tbody = document.querySelector('#propertiesTable tbody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">No properties found. Click "+ Add Property" to get started.</td></tr>';
+      return;
+    }
+    
+    data.forEach(prop => {
+      const houseTypeName = prop.house_types?.type_name || 'N/A';
+      tbody.innerHTML += `<tr><td><strong>${prop.name}</strong></td><td>${prop.location}</td><td>${houseTypeName}</td><td>${prop.houses || 0}</td><td class="actions"><button class="edit" onclick="editProperty('${prop.id}')">Edit</button><button class="del" onclick="deleteProperty('${prop.id}')">Delete</button></td></tr>`;
+    });
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function showAddPropertyForm() {
+  const { data: houseTypes, error } = await supabase.from('house_types').select('*').eq('user_id', currentUser.id);
+  if (error || !houseTypes || houseTypes.length === 0) {
+    alert('Please add house types first! Go to House Types section.');
+    return;
+  }
+  
+  const name = prompt('Property Name:');
+  if (!name) return;
+  const location = prompt('Location:');
+  if (!location) return;
+  
+  let houseTypeList = 'Available House Types:\n\n';
+  houseTypes.forEach((ht, index) => {
+    houseTypeList += `${index + 1}. ${ht.type_name} (Ksh ${Number(ht.rent_amount).toLocaleString()})\n`;
+  });
+  
+  const houseTypeChoice = prompt(houseTypeList + '\nEnter the number of the house type:');
+  if (!houseTypeChoice) return;
+  const selectedHouseType = houseTypes[parseInt(houseTypeChoice) - 1];
+  if (!selectedHouseType) {
+    alert('Invalid house type selection');
+    return;
+  }
+  
+  const houses = prompt('Number of Houses:');
+  if (!houses) return;
+  addProperty(name, location, parseInt(houses), selectedHouseType.id);
+}
+
+async function addProperty(name, location, houses, houseTypeId) {
+  try {
+    showLoading();
+    const { error } = await supabase.from('properties').insert([{name, location, houses, house_type_id: houseTypeId, user_id: currentUser.id}]);
+    if (error) throw error;
+    alert('Property added successfully!');
+    loadProperties();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editProperty(id) {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('properties').select('*').eq('id', id).eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    hideLoading();
+    
+    const name = prompt('Property Name:', data.name);
+    if (!name) return;
+    const location = prompt('Location:', data.location);
+    if (!location) return;
+    const houses = prompt('Number of Houses:', data.houses);
+    if (!houses) return;
+    
+    showLoading();
+    const { error: updateError } = await supabase.from('properties').update({name, location, houses: parseInt(houses)}).eq('id', id).eq('user_id', currentUser.id);
+    if (updateError) throw updateError;
+    alert('Property updated successfully!');
+    loadProperties();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deleteProperty(id) {
+  if (!confirm('Are you sure you want to delete this property?')) return;
+  try {
+    showLoading();
+    const { error } = await supabase.from('properties').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('Property deleted successfully!');
+    loadProperties();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+let allTenants = [];
+let preFillTenantData = null;
+
+async function loadTenants() {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('tenants').select('*, properties (name, id), house_types (type_name, id)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    
+    allTenants = data || [];
+    await populateFilterDropdowns();
+    renderTenants(allTenants);
+    
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function populateFilterDropdowns() {
+  try {
+    const { data: properties } = await supabase.from('properties').select('id, name').eq('user_id', currentUser.id).order('name');
+    const { data: houseTypes } = await supabase.from('house_types').select('id, type_name').eq('user_id', currentUser.id).order('type_name');
+    
+    const propertySelect = document.getElementById('filterProperty');
+    propertySelect.innerHTML = '<option value="">All Properties</option>';
+    if (properties) {
+      properties.forEach(prop => {
+        propertySelect.innerHTML += `<option value="${prop.id}">${prop.name}</option>`;
+      });
+    }
+    
+    const houseTypeSelect = document.getElementById('filterHouseType');
+    houseTypeSelect.innerHTML = '<option value="">All House Types</option>';
+    if (houseTypes) {
+      houseTypes.forEach(ht => {
+        houseTypeSelect.innerHTML += `<option value="${ht.id}">${ht.type_name}</option>`;
+      });
+    }
+  } catch (error) {
+    console.error('Error loading filters:', error);
+  }
+}
+
+function filterTenants() {
+  const propertyFilter = document.getElementById('filterProperty').value;
+  const houseTypeFilter = document.getElementById('filterHouseType').value;
+  const nameFilter = document.getElementById('filterTenantName').value.toLowerCase();
+  
+  let filteredTenants = allTenants;
+  
+  if (propertyFilter) {
+    filteredTenants = filteredTenants.filter(t => t.property_id === propertyFilter);
+  }
+  
+  if (houseTypeFilter) {
+    filteredTenants = filteredTenants.filter(t => t.house_type_id === houseTypeFilter);
+  }
+  
+  if (nameFilter) {
+    filteredTenants = filteredTenants.filter(t => t.name.toLowerCase().includes(nameFilter));
+  }
+  
+  renderTenants(filteredTenants);
+  updateFilterStats(filteredTenants.length, allTenants.length);
+}
+
+function clearTenantFilters() {
+  document.getElementById('filterProperty').value = '';
+  document.getElementById('filterHouseType').value = '';
+  document.getElementById('filterTenantName').value = '';
+  renderTenants(allTenants);
+  updateFilterStats(allTenants.length, allTenants.length);
+}
+
+function updateFilterStats(filtered, total) {
+  const statsDiv = document.getElementById('filterStats');
+  if (filtered === total) {
+    statsDiv.innerHTML = `📊 Showing all ${total} tenant(s)`;
+  } else {
+    statsDiv.innerHTML = `📊 Showing ${filtered} of ${total} tenant(s) (${total - filtered} hidden by filters)`;
+  }
+}
+
+function renderTenants(tenants) {
+  const tbody = document.querySelector('#tenantsTable tbody');
+  tbody.innerHTML = '';
+  
+  if (tenants.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #666;">No tenants found matching your filters. Try adjusting the filters or click "+ Add Tenant" to get started.</td></tr>';
+    updateFilterStats(0, allTenants.length);
+    return;
+  }
+  
+  tenants.forEach(tenant => {
+    const propertyName = tenant.properties?.name || 'N/A';
+    const houseTypeName = tenant.house_types?.type_name || 'N/A';
+    tbody.innerHTML += `<tr><td><strong>${tenant.name}</strong></td><td>${tenant.phone}</td><td>${tenant.email || 'N/A'}</td><td>${propertyName}</td><td>${houseTypeName}</td><td>${tenant.house_number}</td><td><strong style="color: var(--green);">Ksh ${Number(tenant.rent).toLocaleString()}</strong></td><td>${tenant.move_in_date || 'N/A'}</td><td class="actions"><button class="edit" onclick="editTenant('${tenant.id}')">Edit</button><button class="del" onclick="deleteTenant('${tenant.id}')">Delete</button></td></tr>`;
+  });
+  
+  updateFilterStats(tenants.length, allTenants.length);
+}
+
+async function showAddTenantForm(propertyId = null, houseNumber = null) {
+  const { data: properties } = await supabase.from('properties').select('*').eq('user_id', currentUser.id);
+  if (!properties || properties.length === 0) {
+    alert('Please add a property first!');
+    return;
+  }
+  
+  const { data: houseTypes } = await supabase.from('house_types').select('*').eq('user_id', currentUser.id);
+  if (!houseTypes || houseTypes.length === 0) {
+    alert('Please add house types first! Go to House Types section.');
+    return;
+  }
+  
+  let selectedProperty;
+  
+  if (propertyId) {
+    selectedProperty = properties.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      const confirmMsg = `Adding tenant to:\n\n🏢 Property: ${selectedProperty.name}\n🏠 House Number: ${houseNumber}\n\nContinue?`;
+      if (!confirm(confirmMsg)) return;
+    }
+  }
+  
+  if (!selectedProperty) {
+    let propertyList = 'Available Properties:\n\n';
+    properties.forEach((prop, index) => {
+      propertyList += `${index + 1}. ${prop.name} - ${prop.location}\n`;
+    });
+    const propertyChoice = prompt(propertyList + '\nEnter the number of the property:');
+    if (!propertyChoice) return;
+    selectedProperty = properties[parseInt(propertyChoice) - 1];
+    if (!selectedProperty) {
+      alert('Invalid property selection');
+      return;
+    }
+  }
+  
+  let houseTypeList = 'Available House Types:\n\n';
+  houseTypes.forEach((ht, index) => {
+    houseTypeList += `${index + 1}. ${ht.type_name} (Ksh ${Number(ht.rent_amount).toLocaleString()})\n`;
+  });
+  const houseTypeChoice = prompt(houseTypeList + '\nEnter the number of the house type:');
+  if (!houseTypeChoice) return;
+  const selectedHouseType = houseTypes[parseInt(houseTypeChoice) - 1];
+  if (!selectedHouseType) {
+    alert('Invalid house type selection');
+    return;
+  }
+  
+  const name = prompt('Tenant Name:');
+  if (!name) return;
+  const phone = prompt('Phone Number:');
+  if (!phone) return;
+  const email = prompt('Email (optional):');
+  const finalHouseNumber = houseNumber || prompt('House Number:');
+  if (!finalHouseNumber) return;
+  const moveInDate = prompt('Move-in Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+  
+  addTenant(selectedProperty.id, selectedHouseType.id, name, phone, email, finalHouseNumber, selectedHouseType.rent_amount, moveInDate);
+}
+
+async function addTenant(propertyId, houseTypeId, name, phone, email, houseNumber, rent, moveInDate) {
+  try {
+    showLoading();
+    const { error } = await supabase.from('tenants').insert([{property_id: propertyId, house_type_id: houseTypeId, name, phone, email: email || null, house_number: houseNumber, rent, move_in_date: moveInDate, user_id: currentUser.id}]);
+    if (error) throw error;
+    alert('Tenant added successfully!');
+    loadTenants();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editTenant(id) {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('tenants').select('*').eq('id', id).eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    hideLoading();
+    
+    const name = prompt('Tenant Name:', data.name);
+    if (!name) return;
+    const phone = prompt('Phone Number:', data.phone);
+    if (!phone) return;
+    const email = prompt('Email (optional):', data.email || '');
+    const houseNumber = prompt('House Number:', data.house_number);
+    if (!houseNumber) return;
+    const rent = prompt('Monthly Rent (Ksh):', data.rent);
+    if (!rent) return;
+    
+    showLoading();
+    const { error: updateError } = await supabase.from('tenants').update({name, phone, email: email || null, house_number: houseNumber, rent: parseFloat(rent)}).eq('id', id).eq('user_id', currentUser.id);
+    if (updateError) throw updateError;
+    alert('Tenant updated successfully!');
+    loadTenants();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deleteTenant(id) {
+  if (!confirm('Are you sure you want to delete this tenant?')) return;
+  try {
+    showLoading();
+    const { error } = await supabase.from('tenants').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('Tenant deleted successfully!');
+    loadTenants();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+let allInvoices = [];
+let allTenantsForInvoice = [];
+
+async function loadInvoices() {
+  await populateInvoiceFilterDropdowns();
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('invoices').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    
+    allInvoices = data || [];
+    
+    const tbody = document.querySelector('#invoicesTable tbody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #666;">No invoices found. Click "Generate Monthly Invoices" to create invoices.</td></tr>';
+      return;
+    }
+    
+    data.forEach(invoice => {
+      const statusClass = invoice.status === 'paid' ? 'status-paid' : invoice.status === 'overdue' ? 'status-overdue' : 'status-pending';
+      const displayInvoiceNumber = invoice.invoice_number || `#${invoice.id}`;
+      tbody.innerHTML += `<tr><td><strong>${displayInvoiceNumber}</strong></td><td>${invoice.tenant_name}</td><td>${invoice.house_number}</td><td><strong style="color: var(--green);">Ksh ${Number(invoice.amount).toLocaleString()}</strong></td><td>${invoice.due_date}</td><td><span class="status-badge ${statusClass}">${invoice.status}</span></td><td class="actions">${invoice.status === 'unpaid' ? `<button class="edit" onclick="markInvoicePaid('${invoice.id}')">Mark Paid</button>` : ''}<button class="del" onclick="deleteInvoice('${invoice.id}')">Delete</button></td></tr>`;
+    });
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function generateInvoices() {
+  if (!confirm('Generate monthly invoices for all current tenants?')) return;
+  try {
+    showLoading();
+    const { data: tenants, error } = await supabase.from('tenants').select('*').eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (!tenants || tenants.length === 0) {
+      alert('No tenants found. Please add tenants first.');
+      return;
+    }
+    
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const dueDate = new Date(year, month - 1, 5);
+    
+    const invoicesToCreate = [];
+    for (const tenant of tenants) {
+      // Skip tenants without rent amount set
+      if (!tenant.rent || tenant.rent <= 0) {
+        console.log(`Skipping tenant ${tenant.name} - no rent amount set`);
+        continue;
+      }
+      const invoiceNumber = `INV-${year}${month.toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      invoicesToCreate.push({invoice_number: invoiceNumber, tenant_id: tenant.id, tenant_name: tenant.name, property_id: tenant.property_id, house_type_id: tenant.house_type_id, house_number: tenant.house_number, amount: tenant.rent, due_date: dueDate.toISOString().split('T')[0], status: 'unpaid', generated_date: currentDate.toISOString().split('T')[0], month, year, user_id: currentUser.id});
+    }
+    
+    if (invoicesToCreate.length === 0) {
+      alert('No invoices to generate. Please ensure all tenants have rent amounts set.');
+      return;
+    }
+    
+    const { error: insertError } = await supabase.from('invoices').insert(invoicesToCreate);
+    if (insertError) throw insertError;
+    alert(`Successfully generated ${invoicesToCreate.length} invoice(s)!`);
+    loadInvoices();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function markInvoicePaid(id) {
+  try {
+    showLoading();
+    const { error } = await supabase.from('invoices').update({status: 'paid', paid_date: new Date().toISOString().split('T')[0]}).eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('Invoice marked as paid!');
+    loadInvoices();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function populateInvoiceFilterDropdowns() {
+  try {
+    const { data: properties } = await supabase.from('properties').select('id, name').eq('user_id', currentUser.id).order('name');
+    const { data: tenants } = await supabase.from('tenants').select('id, name, property_id, house_type_id, house_number, rent').eq('user_id', currentUser.id).order('name');
+    
+    allTenantsForInvoice = tenants || [];
+    
+    const propertySelect = document.getElementById('invoiceFilterProperty');
+    propertySelect.innerHTML = '<option value="">Select Property</option>';
+    if (properties) {
+      properties.forEach(prop => {
+        propertySelect.innerHTML += `<option value="${prop.id}">${prop.name}</option>`;
+      });
+    }
+  } catch (error) {
+    console.error('Error loading invoice filters:', error);
+  }
+}
+
+async function updateInvoiceHouseTypes() {
+  const propertyId = document.getElementById('invoiceFilterProperty').value;
+  const houseTypeSelect = document.getElementById('invoiceFilterHouseType');
+  const tenantSelect = document.getElementById('invoiceFilterTenant');
+  
+  houseTypeSelect.innerHTML = '<option value="">Select House Type</option>';
+  tenantSelect.innerHTML = '<option value="">Select Tenant</option>';
+  
+  if (!propertyId) {
+    document.getElementById('invoiceFilterInfo').innerHTML = '';
+    return;
+  }
+  
+  try {
+    const { data: property } = await supabase.from('properties').select('*, house_types(id, type_name, rent_amount)').eq('id', propertyId).single();
+    
+    if (property && property.house_types) {
+      houseTypeSelect.innerHTML += `<option value="${property.house_types.id}">${property.house_types.type_name} (Ksh ${Number(property.house_types.rent_amount).toLocaleString()})</option>`;
+    }
+    
+    const tenantsInProperty = allTenantsForInvoice.filter(t => t.property_id === propertyId);
+    document.getElementById('invoiceFilterInfo').innerHTML = `📊 ${tenantsInProperty.length} tenant(s) in ${property.name}`;
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function updateInvoiceTenants() {
+  const propertyId = document.getElementById('invoiceFilterProperty').value;
+  const houseTypeId = document.getElementById('invoiceFilterHouseType').value;
+  const tenantSelect = document.getElementById('invoiceFilterTenant');
+  
+  tenantSelect.innerHTML = '<option value="">Select Tenant</option>';
+  
+  if (!propertyId || !houseTypeId) return;
+  
+  const filteredTenants = allTenantsForInvoice.filter(t => 
+    t.property_id === propertyId && t.house_type_id === houseTypeId
+  );
+  
+  filteredTenants.forEach(tenant => {
+    tenantSelect.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number} (Ksh ${Number(tenant.rent).toLocaleString()})</option>`;
+  });
+  
+  if (filteredTenants.length > 0) {
+    document.getElementById('invoiceFilterInfo').innerHTML = `✅ ${filteredTenants.length} tenant(s) available for invoice generation`;
+  } else {
+    document.getElementById('invoiceFilterInfo').innerHTML = `⚠️ No tenants found for this house type`;
+  }
+}
+
+async function generateSingleInvoice() {
+  const tenantId = document.getElementById('invoiceFilterTenant').value;
+  
+  if (!tenantId) {
+    alert('Please select a tenant first!');
+    return;
+  }
+  
+  try {
+    showLoading();
+    const { data: tenant, error } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
+    if (error) throw error;
+    
+    if (!tenant.rent || tenant.rent <= 0) {
+      alert(`Tenant ${tenant.name} has no rent amount set!`);
+      return;
+    }
+    
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const dueDate = new Date(year, month - 1, 5);
+    
+    const invoiceNumber = `INV-${year}${month.toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    const { error: insertError } = await supabase.from('invoices').insert([{
+      invoice_number: invoiceNumber,
+      tenant_id: tenant.id,
+      tenant_name: tenant.name,
+      property_id: tenant.property_id,
+      house_type_id: tenant.house_type_id,
+      house_number: tenant.house_number,
+      amount: tenant.rent,
+      due_date: dueDate.toISOString().split('T')[0],
+      status: 'unpaid',
+      generated_date: currentDate.toISOString().split('T')[0],
+      month,
+      year,
+      user_id: currentUser.id
+    }]);
+    
+    if (insertError) throw insertError;
+    
+    alert(`✅ Invoice generated successfully for ${tenant.name}!\nInvoice #: ${invoiceNumber}`);
+    loadInvoices();
+    
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function exportSingleInvoicePDF() {
+  const tenantId = document.getElementById('invoiceFilterTenant').value;
+  
+  if (!tenantId) {
+    alert('Please select a tenant first!');
+    return;
+  }
+  
+  try {
+    showLoading();
+    const { data: invoices, error } = await supabase
+      .from('invoices')
+      .select('*, tenants(name, phone, email), properties(name, location)')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    if (error) throw error;
+    
+    if (!invoices || invoices.length === 0) {
+      alert('No invoice found for this tenant. Please generate one first.');
+      return;
+    }
+    
+    const invoice = invoices[0];
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setTextColor(11, 11, 11);
+    doc.text('INVOICE', 105, 20, { align: 'center' });
+    
+    // Invoice details
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Invoice #: ${invoice.invoice_number || '#' + invoice.id}`, 14, 35);
+    doc.text(`Generated: ${invoice.generated_date}`, 14, 41);
+    doc.text(`Due Date: ${invoice.due_date}`, 14, 47);
+    
+    // Tenant details
+    doc.setFontSize(12);
+    doc.setTextColor(11, 11, 11);
+    doc.text('BILL TO:', 14, 60);
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text(invoice.tenant_name, 14, 67);
+    if (invoice.tenants?.phone) doc.text(`Phone: ${invoice.tenants.phone}`, 14, 73);
+    if (invoice.tenants?.email) doc.text(`Email: ${invoice.tenants.email}`, 14, 79);
+    doc.text(`House: ${invoice.house_number}`, 14, 85);
+    if (invoice.properties) {
+      doc.text(`Property: ${invoice.properties.name}`, 14, 91);
+      doc.text(`Location: ${invoice.properties.location}`, 14, 97);
+    }
+    
+    // Invoice table
+    doc.autoTable({
+      startY: 110,
+      head: [['Description', 'Period', 'Amount']],
+      body: [[
+        'Monthly Rent',
+        `${getMonthName(invoice.month)} ${invoice.year}`,
+        `Ksh ${Number(invoice.amount).toLocaleString()}`
+      ]],
+      theme: 'striped',
+      headStyles: { fillColor: [11, 11, 11], fontSize: 11 },
+      styles: { fontSize: 10 }
+    });
+    
+    // Total
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(14);
+    doc.setTextColor(39, 174, 96);
+    doc.text(`TOTAL: Ksh ${Number(invoice.amount).toLocaleString()}`, 14, finalY);
+    
+    // Status
+    doc.setFontSize(10);
+    if (invoice.status === 'paid') {
+      doc.setTextColor(39, 174, 96);
+      doc.text(`STATUS: PAID (${invoice.paid_date})`, 14, finalY + 10);
+    } else {
+      doc.setTextColor(192, 57, 43);
+      doc.text('STATUS: UNPAID', 14, finalY + 10);
+    }
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Thank you for your business!', 105, 280, { align: 'center' });
+    doc.text('CHARLES SOFTWARE 2025', 105, 285, { align: 'center' });
+    
+    doc.save(`Invoice_${invoice.invoice_number || invoice.id}_${invoice.tenant_name.replace(/\s+/g, '_')}.pdf`);
+    alert('✅ Invoice PDF exported successfully!');
+    
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function getMonthName(monthNumber) {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return months[monthNumber - 1] || '';
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Are you sure you want to delete this invoice?')) return;
+  try {
+    showLoading();
+    const { error } = await supabase.from('invoices').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('Invoice deleted successfully!');
+    loadInvoices();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function loadPayments() {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('payments').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
+    if (error) throw error;
+    
+    const tbody = document.querySelector('#paymentsTable tbody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #666;">No payments recorded. Click "+ Record Payment" to add a payment.</td></tr>';
+      return;
+    }
+    
+    data.forEach(payment => {
+      tbody.innerHTML += `<tr><td>${payment.date}</td><td>${payment.tenant_name}</td><td>${payment.house_number}</td><td><strong style="color: var(--green);">Ksh ${Number(payment.amount).toLocaleString()}</strong></td><td>${payment.method}</td><td>${payment.reference || 'N/A'}</td><td class="actions"><button class="del" onclick="deletePayment('${payment.id}')">Delete</button></td></tr>`;
+    });
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function showRecordPaymentForm() {
+  const { data: tenants, error } = await supabase.from('tenants').select('*').eq('user_id', currentUser.id);
+  if (error || !tenants || tenants.length === 0) {
+    alert('Please add tenants first!');
+    return;
+  }
+  
+  let tenantList = 'Available Tenants:\n\n';
+  tenants.forEach((tenant, index) => {
+    tenantList += `${index + 1}. ${tenant.name} - House ${tenant.house_number} (Rent: Ksh ${Number(tenant.rent).toLocaleString()})\n`;
+  });
+  const tenantChoice = prompt(tenantList + '\nEnter the number of the tenant:');
+  if (!tenantChoice) return;
+  const selectedTenant = tenants[parseInt(tenantChoice) - 1];
+  if (!selectedTenant) {
+    alert('Invalid tenant selection');
+    return;
+  }
+  
+  const amount = prompt(`Amount (Ksh):`, selectedTenant.rent);
+  if (!amount) return;
+  const date = prompt('Payment Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+  if (!date) return;
+  const method = prompt('Payment Method (Cash/M-Pesa/Bank Transfer):');
+  if (!method) return;
+  const reference = prompt('Reference Number (optional):');
+  
+  recordPayment(selectedTenant.id, selectedTenant.name, selectedTenant.property_id, selectedTenant.house_number, parseFloat(amount), date, method, reference);
+}
+
+async function recordPayment(tenantId, tenantName, propertyId, houseNumber, amount, date, method, reference) {
+  try {
+    showLoading();
+    const paymentId = `PAY-${Date.now()}`;
+    const { error } = await supabase.from('payments').insert([{id: paymentId, tenant_id: tenantId, tenant_name: tenantName, property_id: propertyId, house_number: houseNumber, amount, date, method, reference: reference || null, user_id: currentUser.id}]);
+    if (error) throw error;
+    
+    await supabase.from('invoices').update({status: 'paid', paid_date: date}).eq('tenant_id', tenantId).eq('status', 'unpaid').limit(1);
+    alert('Payment recorded successfully!');
+    loadPayments();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deletePayment(id) {
+  if (!confirm('Are you sure you want to delete this payment?')) return;
+  try {
+    showLoading();
+    const { error } = await supabase.from('payments').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    alert('Payment deleted successfully!');
+    loadPayments();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function exportInvoicesData() {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('invoices').select('*').eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      alert('No invoices to export');
+      return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text('Invoices Report', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    
+    const tableData = data.map(invoice => [invoice.invoice_number || `#${invoice.id}`, invoice.tenant_name, invoice.house_number, `Ksh ${Number(invoice.amount).toLocaleString()}`, invoice.due_date, invoice.status]);
+    doc.autoTable({startY: 35, head: [['Invoice #', 'Tenant', 'House', 'Amount', 'Due Date', 'Status']], body: tableData, theme: 'striped', headStyles: { fillColor: [11, 11, 11] }, styles: { fontSize: 8 }});
+    
+    const totalAmount = data.reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Total Amount: Ksh ${totalAmount.toLocaleString()}`, 14, finalY);
+    doc.text(`Total Invoices: ${data.length}`, 14, finalY + 7);
+    doc.save(`Invoices_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    alert('Invoices report exported successfully!');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function exportPaymentsData() {
+  try {
+    showLoading();
+    const { data, error } = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      alert('No payments to export');
+      return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text('Payments Report', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    
+    const tableData = data.map(payment => [payment.date, payment.tenant_name, payment.house_number, `Ksh ${Number(payment.amount).toLocaleString()}`, payment.method, payment.reference || 'N/A']);
+    doc.autoTable({startY: 35, head: [['Date', 'Tenant', 'House', 'Amount', 'Method', 'Reference']], body: tableData, theme: 'striped', headStyles: { fillColor: [11, 11, 11] }, styles: { fontSize: 8 }});
+    
+    const totalAmount = data.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Total Payments: Ksh ${totalAmount.toLocaleString()}`, 14, finalY);
+    doc.text(`Number of Payments: ${data.length}`, 14, finalY + 7);
+    doc.save(`Payments_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    alert('Payments report exported successfully!');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', event, session);
+  
+  if (event === 'SIGNED_IN' && session) {
+    currentUser = session.user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('signupScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    
+    const userName = session.user.user_metadata?.name || session.user.email;
+    document.getElementById('userName').textContent = userName;
+    
+    checkSubscription();
+    loadDashboard();
+    
+  } else if (event === 'SIGNED_OUT' || !session) {
+    currentUser = null;
+    if (trialCheckInterval) clearInterval(trialCheckInterval);
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('signupScreen').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
