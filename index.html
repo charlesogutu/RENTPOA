@@ -302,9 +302,6 @@
             <h2>Tenants</h2>
             <div style="display:flex;gap:10px;align-items:center;">
               <button class="btn" onclick="showAddTenantForm()">+ Add Tenant</button>
-              <button class="btn" style="background:#6c757d;color:#fff;padding:8px 15px;font-size:12px;" onclick="debugTenantIssue()" title="Debug tenant issues">🔧 Debug Tenants</button>
-              <button class="btn" style="background:#28a745;color:#fff;padding:8px 15px;font-size:12px;" onclick="debugSubscriptionsTable()" title="Debug subscription issues">🔧 Debug Subscriptions</button>
-              <button class="btn" style="background:#6f42c1;color:#fff;padding:8px 15px;font-size:12px;" onclick="forceOwnerMode()" title="Force Owner Mode">🏆 Force Owner</button>
             </div>
           </div>
           
@@ -828,7 +825,7 @@ async function createTrialSubscription() {
     }
     
     // Create regular trial subscription
-    console.log('⏰ Creating 7-day trial subscription');
+    console.log('⏰ Creating 1-hour trial subscription');
     
     const trialDuration = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
     const now = new Date();
@@ -1740,139 +1737,6 @@ async function editTenant(id) {
     alert('Error: ' + error.message);
   } finally {
     hideLoading();
-  }
-}
-
-// Debug function to check authentication and database access
-async function debugTenantIssue() {
-  try {
-    console.log('=== TENANT DEBUG INFO ===');
-    console.log('Current User:', currentUser);
-    
-    if (!currentUser) {
-      console.error('❌ User not authenticated!');
-      alert('Error: You are not logged in. Please refresh the page and log in again.');
-      return;
-    }
-    
-    console.log('✅ User ID:', currentUser.id);
-    console.log('✅ User Email:', currentUser.email);
-    
-    // Check if we can read tenants
-    const { data: tenants, error: readError } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('user_id', currentUser.id);
-    
-    if (readError) {
-      console.error('❌ Error reading tenants:', readError);
-      alert('Error reading tenants: ' + readError.message);
-    } else {
-      console.log('✅ Current tenants count:', tenants?.length || 0);
-      console.log('Current tenants:', tenants);
-    }
-    
-    // Check properties access
-    const { data: properties, error: propError } = await supabase
-      .from('properties')
-      .select('*')
-      .eq('user_id', currentUser.id);
-      
-    if (propError) {
-      console.error('❌ Error reading properties:', propError);
-    } else {
-      console.log('✅ Properties count:', properties?.length || 0);
-    }
-    
-    // Check house types access  
-    const { data: houseTypes, error: htError } = await supabase
-      .from('house_types')
-      .select('*')
-      .eq('user_id', currentUser.id);
-      
-    if (htError) {
-      console.error('❌ Error reading house types:', htError);
-    } else {
-      console.log('✅ House types count:', houseTypes?.length || 0);
-    }
-    
-    console.log('=== END DEBUG INFO ===');
-    
-    alert('Debug info logged to console. Check browser developer tools (F12 → Console) for details.');
-    
-  } catch (error) {
-    console.error('Debug function error:', error);
-    alert('Debug function error: ' + error.message);
-  }
-}
-
-// Manual override to force OWNER mode
-function forceOwnerMode() {
-  console.log('🚀 MANUAL OWNER MODE ACTIVATION');
-  console.log('🔧 Forcing owner mode for debugging purposes...');
-  
-  // Force set owner subscription
-  userSubscription = {
-    subscription_status: 'active',
-    subscription_type: 'owner',
-    subscription_expires_at: new Date(2030, 0, 1).toISOString(), // Year 2030
-    payment_verified: true,
-    user_id: currentUser?.id
-  };
-  
-  console.log('🏆 Forced userSubscription object:', userSubscription);
-  console.log('🏆 subscription_type:', userSubscription.subscription_type);
-  console.log('🏆 subscription_status:', userSubscription.subscription_status);
-  
-  // Force update UI
-  updateSubscriptionUI();
-  
-  // Show notification with detailed info
-  const userEmail = currentUser?.email || 'Unknown';
-  alert(`🏆 OWNER MODE FORCED!
-
-✅ Owner subscription activated
-👤 User: ${userEmail}
-📅 Expires: ${userSubscription.subscription_expires_at}
-🏆 Check top-right corner for purple OWNER badge
-
-If badge doesn't appear, check browser console (F12) for debug info.`);
-  
-  console.log('🚀 MANUAL OWNER MODE COMPLETE');
-  console.log('🔍 Check browser console for detailed debug information');
-}
-
-// Debug function to check subscriptions table structure
-async function debugSubscriptionsTable() {
-  try {
-    console.log('=== SUBSCRIPTIONS DEBUG INFO ===');
-    
-    // Check basic subscription query
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .limit(1);
-    
-    if (error) {
-      console.error('❌ Error querying subscriptions:', error);
-    } else {
-      console.log('✅ Subscriptions query successful');
-      console.log('Sample subscription record:', data?.[0] || 'No records');
-      
-      if (data && data.length > 0) {
-        console.log('Available columns:', Object.keys(data[0]));
-        console.log('Missing subscription_status:', !('subscription_status' in data[0]));
-        console.log('Missing trial_expires_at:', !('trial_expires_at' in data[0]));
-      }
-    }
-    
-    console.log('=== END SUBSCRIPTIONS DEBUG ===');
-    alert('Subscription debug info logged to console. Check F12 → Console for details.');
-    
-  } catch (error) {
-    console.error('Subscriptions debug error:', error);
-    alert('Subscriptions debug error: ' + error.message);
   }
 }
 
