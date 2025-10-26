@@ -97,9 +97,9 @@
   .status-paid{background:#55efc4;color:#00b894;}
   .status-overdue{background:#fab1a0;color:#e74c3c;}
   
-  .payment-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center;}
+  .payment-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;align-items:center;justify-content:center;overflow-y:auto;}
   .payment-modal.show{display:flex;}
-  .payment-content{background:#fff;padding:40px;border-radius:16px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;}
+  .payment-content{background:#fff;padding:30px;border-radius:16px;max-width:700px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;margin:20px;}
   @keyframes slideIn{from{transform:translateY(-50px);opacity:0} to{transform:translateY(0);opacity:1}}
   
   .payment-header{text-align:center;margin-bottom:30px;}
@@ -149,10 +149,48 @@
   .invoice-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
   
   @media (max-width:768px){
-    .content{flex-direction:column}
-    .sidebar{width:100%;height:auto}
-    .stats-grid{grid-template-columns:1fr}
+    .content{flex-direction:row}
+    .sidebar{
+      width: 200px;
+      height: calc(100vh - 60px);
+      position: relative;
+      overflow-y: auto;
+      background: linear-gradient(180deg,#2c3e50 0%,#34495e 100%);
+    }
+    #mainSection{
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background: #fff;
+    }
+    .stats-grid{grid-template-columns:1fr 1fr}
     .payment-options{grid-template-columns:1fr}
+    .invoice-form{grid-template-columns:1fr}
+    .nav-item{padding:12px 15px;font-size:14px}
+    .logo{font-size:18px;padding:12px 15px}
+    .user-info{padding:12px 15px;gap:10px}
+    .section-title h2{font-size:20px}
+    table{font-size:12px}
+    th, td{padding:10px 8px}
+    .actions{gap:5px}
+    .edit, .del, .view{padding:4px 8px;font-size:11px}
+  }
+  
+  @media (max-width:480px){
+    .sidebar{
+      width: 180px;
+    }
+    #mainSection{
+      padding: 10px;
+    }
+    .stats-grid{grid-template-columns:1fr}
+    .payment-content{
+      max-width: 95%;
+      padding: 20px;
+      margin: 10px;
+    }
+    .nav-item{padding:10px 12px;font-size:13px}
+    .logo{font-size:16px;padding:10px 12px}
   }
 </style>
 </head>
