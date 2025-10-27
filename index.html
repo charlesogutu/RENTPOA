@@ -891,6 +891,22 @@ async function createTrialSubscription() {
   try {
     console.log('📝 Creating trial subscription for user:', currentUser?.id);
     
+    // Don't create trial for owners - they have unlimited access
+    if (currentUser?.email) {
+      const ownerEmails = [
+        'admin@rentpoa.com',
+        'owner@rentpoa.com', 
+        'charlessoftware2025@gmail.com',
+        'daisy@rentpoa.com',
+        'charlesogutu081@gmail.com'
+      ];
+      
+      if (ownerEmails.includes(currentUser.email.toLowerCase())) {
+        console.log('🏆 OWNER DETECTED: Skipping trial creation for owner');
+        return;
+      }
+    }
+    
     // Check if this should be an owner subscription
     const { data: existingSub, error: subError } = await supabase
       .from('subscriptions')
@@ -3242,7 +3258,27 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     const userName = session.user.user_metadata?.name || session.user.email;
     document.getElementById('userName').textContent = userName;
     
-    await checkSubscription();
+    // Check for owner email first - grant owner access if email matches
+    const ownerEmails = [
+      'admin@rentpoa.com',
+      'owner@rentpoa.com', 
+      'charlessoftware2025@gmail.com',
+      'daisy@rentpoa.com',
+      'charlesogutu081@gmail.com'
+    ];
+    
+    if (ownerEmails.includes(session.user.email.toLowerCase())) {
+      console.log('🏆 OWNER ACCESS GRANTED for email:', session.user.email);
+      userSubscription = {
+        subscription_status: 'active',
+        subscription_type: 'owner',
+        subscription_expires_at: new Date(2030, 0, 1).toISOString(),
+        payment_verified: true
+      };
+      updateSubscriptionUI();
+    } else {
+      await checkSubscription();
+    }
     
     // Check if user can access dashboard
     const canAccess = await canUserAccessDashboard();
