@@ -783,10 +783,45 @@ async function signup() {
 
 async function logout() {
   try {
-    if (trialCheckInterval) clearInterval(trialCheckInterval);
+    console.log('🔄 Starting logout process...');
+    
+    // Clear trial timer if active
+    if (trialCheckInterval) {
+      console.log('🧹 Clearing trial timer...');
+      clearInterval(trialCheckInterval);
+      trialCheckInterval = null;
+    }
+    
+    // Clear user data
+    currentUser = null;
+    userSubscription = null;
+    
+    // Sign out from Supabase
+    console.log('👋 Signing out from Supabase...');
     await supabase.auth.signOut();
+    
+    // Reset UI state
+    console.log('🎨 Resetting UI...');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('signupScreen').style.display = 'none';
+    document.getElementById('paymentModal').classList.remove('show');
+    
+    // Clear any trial banners
+    const trialBanner = document.getElementById('trialBanner');
+    if (trialBanner) {
+      trialBanner.style.display = 'none';
+    }
+    
+    console.log('✅ Logout completed successfully');
+    
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('❌ Logout error:', error);
+    alert('Logout failed: ' + error.message);
+    
+    // Even if logout fails, try to reset UI
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
   }
 }
 
