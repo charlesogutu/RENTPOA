@@ -833,6 +833,33 @@ async function checkSubscription() {
         return;
       }
       
+      // Check if trial has expired
+      if (subscription.subscription_type === 'trial') {
+        const now = new Date();
+        const trialExpires = new Date(subscription.trial_expires_at);
+        
+        if (trialExpires <= now) {
+          console.log('⏰ Trial has expired - blocking access and showing payment modal');
+          
+          // Trial expired - block access and show payment modal
+          userSubscription = {
+            subscription_status: 'expired',
+            subscription_type: 'trial',
+            trial_expires_at: subscription.trial_expires_at,
+            created_at: subscription.created_at
+          };
+          
+          updateSubscriptionUI();
+          showPaymentModal(); // Show payment modal immediately
+          return; // Don't allow dashboard access
+        }
+        
+        // Trial is still active
+        userSubscription = subscription;
+        updateSubscriptionUI();
+        return;
+      }
+      
       // Regular subscription found
       userSubscription = subscription;
       updateSubscriptionUI();
@@ -897,6 +924,26 @@ async function createTrialSubscription() {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + trialDuration);
     
+    // Save trial to database for persistence
+    const { data: trialData, error: trialError } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: currentUser.id,
+        subscription_status: 'trial',
+        subscription_type: 'trial',
+        trial_expires_at: expiresAt.toISOString(),
+        created_at: now.toISOString()
+      })
+      .select()
+      .single();
+    
+    if (trialError) {
+      console.error('Error saving trial to database:', trialError);
+      // Continue with local trial even if database save fails
+    } else {
+      console.log('✅ Trial saved to database successfully');
+    }
+    
     userSubscription = {
       subscription_status: 'trial',
       subscription_type: 'trial',
@@ -933,9 +980,15 @@ function startTrialTimer() {
     return;
   }
   
+  // Skip timer if trial is expired
+  if (userSubscription && userSubscription.subscription_status === 'expired') {
+    console.log('⏰ Trial already expired - skipping timer');
+    return;
+  }
+  
   if (trialCheckInterval) clearInterval(trialCheckInterval);
   
-  trialCheckInterval = setInterval(() => {
+  trialCheckInterval = setInterval(async () => {
     if (!userSubscription || userSubscription.subscription_status !== 'trial') {
       clearInterval(trialCheckInterval);
       return;
@@ -947,6 +1000,27 @@ function startTrialTimer() {
     
     if (timeLeft <= 0) {
       clearInterval(trialCheckInterval);
+      
+      // Update database to mark trial as expired
+      try {
+        await supabase
+          .from('subscriptions')
+          .update({ 
+            subscription_status: 'expired',
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', currentUser.id)
+          .eq('subscription_type', 'trial');
+          
+        console.log('⏰ Trial marked as expired in database');
+      } catch (error) {
+        console.error('Error updating trial status in database:', error);
+      }
+      
+      // Update local subscription status
+      userSubscription.subscription_status = 'expired';
+      updateSubscriptionUI();
+      
       showPaymentModal();
       return;
     }
@@ -1020,7 +1094,7 @@ function updateSubscriptionUI() {
   console.log('✅ updateSubscriptionUI completed successfully');
 }
 
-function showPaymentModal() {
+function showPaymentModal(reason = 'trial_expired') {
   // OWNER MODE: Skip payment modal - always free access
   if (userSubscription && userSubscription.subscription_type === 'owner') {
     console.log('🏆 OWNER MODE: Payment modal skipped - unlimited free access');
@@ -1035,8 +1109,27 @@ function showPaymentModal() {
     return;
   }
   
+  // Update modal content based on reason
+  const modalTitle = document.getElementById('paymentModal').querySelector('h2');
+  const modalMessage = document.getElementById('paymentModal').querySelector('p');
+  
+  if (reason === 'trial_expired') {
+    if (modalTitle) modalTitle.textContent = '⏰ Trial Expired';
+    if (modalMessage) modalMessage.textContent = 'Your free trial has ended. Please subscribe to continue using RentPoa.';
+  } else {
+    if (modalTitle) modalTitle.textContent = '💳 Subscribe to Continue';
+    if (modalMessage) modalMessage.textContent = 'Subscribe to unlock all features of RentPoa Property Management.';
+  }
+  
+  // Show modal and block dashboard access
   document.getElementById('paymentModal').classList.add('show');
   selectPlan('monthly');
+  
+  // Ensure dashboard content is hidden
+  document.querySelector('.content').style.display = 'none';
+  document.getElementById('trialBanner').style.display = 'none';
+  
+  console.log('🔒 Payment modal shown - dashboard access blocked');
 }
 
 function selectPlan(plan) {
@@ -1114,6 +1207,10 @@ async function submitPayment() {
     document.getElementById('paymentModal').classList.remove('show');
     alert('✅ Payment confirmed! Your subscription is now active.');
     
+    // Restore dashboard access after successful payment
+    document.querySelector('.content').style.display = 'flex';
+    document.getElementById('trialBanner').style.display = 'none';
+    
     await checkSubscription();
     
   } catch (error) {
@@ -1148,6 +1245,13 @@ function isOwner() {
 }
 
 function showSection(sectionName) {
+  // Check if user can access dashboard (payment required)
+  if (!userSubscription || userSubscription.subscription_status === 'expired') {
+    console.log('⛔ Navigation blocked - payment required');
+    showPaymentModal();
+    return;
+  }
+  
   document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
   
@@ -3102,7 +3206,31 @@ async function exportReceiptsData() {
   }
 }
 
-supabase.auth.onAuthStateChange((event, session) => {
+// Function to check if user can access dashboard
+async function canUserAccessDashboard() {
+  if (!userSubscription) return false;
+  
+  // Owner can always access
+  if (userSubscription.subscription_type === 'owner') return true;
+  
+  // Paid subscriptions can access
+  if (userSubscription.subscription_status === 'active' && userSubscription.payment_verified) return true;
+  
+  // Trial users can access if trial hasn't expired
+  if (userSubscription.subscription_type === 'trial' && userSubscription.subscription_status === 'trial') {
+    const now = new Date();
+    const trialExpires = new Date(userSubscription.trial_expires_at);
+    return trialExpires > now;
+  }
+  
+  // Expired trials cannot access
+  if (userSubscription.subscription_status === 'expired') return false;
+  
+  return false;
+}
+
+// Modified authentication state change handler
+supabase.auth.onAuthStateChange(async (event, session) => {
   console.log('Auth state changed:', event, session);
   
   if (event === 'SIGNED_IN' && session) {
@@ -3114,8 +3242,23 @@ supabase.auth.onAuthStateChange((event, session) => {
     const userName = session.user.user_metadata?.name || session.user.email;
     document.getElementById('userName').textContent = userName;
     
-    checkSubscription();
-    loadDashboard();
+    await checkSubscription();
+    
+    // Check if user can access dashboard
+    const canAccess = await canUserAccessDashboard();
+    
+    if (canAccess) {
+      // User can access dashboard
+      loadDashboard();
+    } else {
+      // User cannot access - show payment modal and hide dashboard
+      console.log('⛔ Access denied - showing payment modal');
+      showPaymentModal();
+      
+      // Hide main content and show payment modal
+      document.querySelector('.content').style.display = 'none';
+      document.getElementById('trialBanner').style.display = 'none';
+    }
     
   } else if (event === 'SIGNED_OUT' || !session) {
     currentUser = null;
@@ -3125,6 +3268,49 @@ supabase.auth.onAuthStateChange((event, session) => {
     document.getElementById('signupScreen').style.display = 'none';
   }
 });
+
+// ========== TESTING HELPERS ==========
+
+// Helper function to test trial expiration (for testing only)
+function testTrialExpiration() {
+  if (confirm('This will set your trial to expired for testing. Continue?')) {
+    supabase
+      .from('subscriptions')
+      .update({ 
+        subscription_status: 'expired',
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', currentUser.id)
+      .then(() => {
+        alert('Trial set to expired. Try refreshing the page.');
+        location.reload();
+      });
+  }
+}
+
+// Helper function to check current subscription status
+function checkCurrentStatus() {
+  console.log('🔍 Current subscription status:', userSubscription);
+  console.log('🔍 Current user:', currentUser);
+  
+  if (userSubscription?.trial_expires_at) {
+    const expiresAt = new Date(userSubscription.trial_expires_at);
+    const now = new Date();
+    const timeLeft = expiresAt - now;
+    
+    if (timeLeft > 0) {
+      const minutes = Math.floor(timeLeft / 60000);
+      const seconds = Math.floor((timeLeft % 60000) / 1000);
+      console.log(`⏰ Time remaining: ${minutes}m ${seconds}s`);
+    } else {
+      console.log('⏰ Trial has expired');
+    }
+  }
+}
+
+console.log('💡 Testing helpers available:');
+console.log('- testTrialExpiration() - Set trial to expired for testing');
+console.log('- checkCurrentStatus() - Check current subscription status');
 </script>
 </body>
 </html>
