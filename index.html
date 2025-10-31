@@ -283,6 +283,7 @@
         <div class="nav-item" onclick="showSection('invoices')">📄 Invoices</div>
         <div class="nav-item" onclick="showSection('receipts')">🧾 Receipts</div>
         <div class="nav-item" onclick="showSection('payments')">💰 Payments</div>
+        <div class="nav-item" onclick="showSection('expenses')">🔧 Expenses</div>
       </div>
 
       <div id="mainSection">
@@ -547,6 +548,128 @@
                 <th>House</th>
                 <th>Amount</th>
                 <th>Paid Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="expenses" class="page">
+          <div class="section-title">
+            <h2>🔧 Expenses</h2>
+            <div>
+              <button class="btn green" onclick="exportExpensesData()">📊 Export Data</button>
+            </div>
+          </div>
+          
+          <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#333;">➕ Add New Expense</h3>
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:15px;align-items:end;margin-bottom:15px;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Select Property *</label>
+                <select id="expenseProperty" onchange="updateExpenseHouseTypes()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select Property</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Select House Type *</label>
+                <select id="expenseHouseType" onchange="updateExpenseTenants()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select House Type</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Select Tenant *</label>
+                <select id="expenseTenant" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">Select Tenant</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style="background:#fff;padding:20px;border-radius:8px;margin-bottom:15px;">
+              <h4 style="margin:0 0 15px;font-size:14px;color:#333;">💵 Expense Details (in Shillings)</h4>
+              <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:15px;">
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">🔧 Repair</label>
+                  <input type="number" id="expenseRepair" min="0" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">🛠️ Maintenance</label>
+                  <input type="number" id="expenseMaintenance" min="0" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">🧹 Cleaning</label>
+                  <input type="number" id="expenseCleaning" min="0" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">🚿 Plumbing</label>
+                  <input type="number" id="expensePlumbing" min="0" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">⚡ Electrical</label>
+                  <input type="number" id="expenseElectrical" min="0" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+                </div>
+              </div>
+            </div>
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;padding:15px;border-radius:8px;margin-bottom:15px;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">📅 Expense Date</label>
+                <input type="date" id="expenseDate" style="padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;" />
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:12px;color:#666;font-weight:600;margin-bottom:5px;">TOTAL EXPENSES</div>
+                <div id="expenseTotalDisplay" style="font-size:24px;font-weight:700;color:var(--red);">Ksh 0</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button class="btn" onclick="clearExpenseForm()">Clear Form</button>
+              <button id="saveExpenseBtn" class="btn green" onclick="addExpense()">💾 Save Expense</button>
+            </div>
+          </div>
+          
+          <!-- Search/Filter Section -->
+          <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#333;">🔍 Filter Expenses</h3>
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:15px;align-items:end;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Property</label>
+                <select id="expenseFilterProperty" onchange="updateFilterHouseTypes()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All Properties</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">House Type</label>
+                <select id="expenseFilterHouseType" onchange="updateFilterTenants()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All House Types</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#666;">Tenant</label>
+                <select id="expenseFilterTenant" onchange="filterExpenses()" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;">
+                  <option value="">All Tenants</option>
+                </select>
+              </div>
+              <div>
+                <button class="btn" onclick="clearExpenseFilters()" style="width:100%;">Clear Filters</button>
+              </div>
+            </div>
+          </div>
+          
+          <table id="expensesTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Property</th>
+                <th>House Type</th>
+                <th>Tenant</th>
+                <th>Repair</th>
+                <th>Maintenance</th>
+                <th>Cleaning</th>
+                <th>Plumbing</th>
+                <th>Electrical</th>
+                <th>Total</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1324,6 +1447,7 @@ function showSection(sectionName) {
   else if (sectionName === 'invoices') loadInvoices();
   else if (sectionName === 'receipts') loadReceipts();
   else if (sectionName === 'payments') loadPayments();
+  else if (sectionName === 'expenses') loadExpenses();
 }
 
 function toggleMobileMenu() {
@@ -3382,6 +3506,668 @@ function checkCurrentStatus() {
 console.log('💡 Testing helpers available:');
 console.log('- testTrialExpiration() - Set trial to expired for testing');
 console.log('- checkCurrentStatus() - Check current subscription status');
+
+// ========== EXPENSES FUNCTIONALITY ==========
+
+let allExpenses = [];
+let allTenantsForExpense = [];
+let editingExpenseId = null; // Track if we're editing an expense
+
+async function loadExpenses() {
+  await populateExpenseDropdowns();
+  await populateExpenseFilterDropdowns();
+  try {
+    showLoading();
+    const { data, error } = await supabase
+      .from('expenses')
+      .select(`
+        *,
+        tenants(name, house_number),
+        properties(name),
+        house_types(type_name)
+      `)
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    allExpenses = data || [];
+    renderExpenses(allExpenses);
+    
+    // Set default date to today
+    document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+    
+  } catch (error) {
+    console.error('Error loading expenses:', error);
+    alert('Error loading expenses: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function populateExpenseDropdowns() {
+  try {
+    const { data: properties } = await supabase
+      .from('properties')
+      .select('id, name, house_type_id')
+      .eq('user_id', currentUser.id)
+      .order('name');
+    
+    const { data: tenants } = await supabase
+      .from('tenants')
+      .select('id, name, property_id, house_type_id, house_number')
+      .eq('user_id', currentUser.id)
+      .order('name');
+    
+    allTenantsForExpense = tenants || [];
+    
+    const propertySelect = document.getElementById('expenseProperty');
+    propertySelect.innerHTML = '<option value="">Select Property</option>';
+    if (properties) {
+      properties.forEach(prop => {
+        propertySelect.innerHTML += `<option value="${prop.id}" data-house-type="${prop.house_type_id}">${prop.name}</option>`;
+      });
+    }
+  } catch (error) {
+    console.error('Error loading expense dropdowns:', error);
+  }
+}
+
+async function updateExpenseHouseTypes() {
+  const propertySelect = document.getElementById('expenseProperty');
+  const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+  const houseTypeSelect = document.getElementById('expenseHouseType');
+  const tenantSelect = document.getElementById('expenseTenant');
+  
+  houseTypeSelect.innerHTML = '<option value="">Select House Type</option>';
+  tenantSelect.innerHTML = '<option value="">Select Tenant</option>';
+  
+  if (!propertySelect.value) return;
+  
+  try {
+    const { data: property } = await supabase
+      .from('properties')
+      .select('*, house_types(id, type_name)')
+      .eq('id', propertySelect.value)
+      .single();
+    
+    if (property && property.house_types) {
+      houseTypeSelect.innerHTML += `<option value="${property.house_types.id}">${property.house_types.type_name}</option>`;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+function updateExpenseTenants() {
+  const propertyId = document.getElementById('expenseProperty').value;
+  const houseTypeId = document.getElementById('expenseHouseType').value;
+  const tenantSelect = document.getElementById('expenseTenant');
+  
+  tenantSelect.innerHTML = '<option value="">Select Tenant</option>';
+  
+  if (!propertyId || !houseTypeId) return;
+  
+  const filteredTenants = allTenantsForExpense.filter(t => 
+    t.property_id === propertyId && t.house_type_id === houseTypeId
+  );
+  
+  filteredTenants.forEach(tenant => {
+    tenantSelect.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+  });
+}
+
+// Auto-calculate expense total
+document.addEventListener('DOMContentLoaded', function() {
+  // Add event listeners to expense inputs for auto-calculation
+  const expenseInputs = ['expenseRepair', 'expenseMaintenance', 'expenseCleaning', 'expensePlumbing', 'expenseElectrical'];
+  expenseInputs.forEach(inputId => {
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.addEventListener('input', updateExpenseTotal);
+    }
+  });
+});
+
+function updateExpenseTotal() {
+  const repair = parseFloat(document.getElementById('expenseRepair')?.value || 0);
+  const maintenance = parseFloat(document.getElementById('expenseMaintenance')?.value || 0);
+  const cleaning = parseFloat(document.getElementById('expenseCleaning')?.value || 0);
+  const plumbing = parseFloat(document.getElementById('expensePlumbing')?.value || 0);
+  const electrical = parseFloat(document.getElementById('expenseElectrical')?.value || 0);
+  
+  const total = repair + maintenance + cleaning + plumbing + electrical;
+  const displayElement = document.getElementById('expenseTotalDisplay');
+  if (displayElement) {
+    displayElement.textContent = `Ksh ${total.toLocaleString()}`;
+  }
+}
+
+async function addExpense() {
+  const propertyId = document.getElementById('expenseProperty').value;
+  const houseTypeId = document.getElementById('expenseHouseType').value;
+  const tenantId = document.getElementById('expenseTenant').value;
+  const expenseDate = document.getElementById('expenseDate').value;
+  
+  const repair = parseFloat(document.getElementById('expenseRepair').value) || 0;
+  const maintenance = parseFloat(document.getElementById('expenseMaintenance').value) || 0;
+  const cleaning = parseFloat(document.getElementById('expenseCleaning').value) || 0;
+  const plumbing = parseFloat(document.getElementById('expensePlumbing').value) || 0;
+  const electrical = parseFloat(document.getElementById('expenseElectrical').value) || 0;
+  
+  if (!propertyId || !houseTypeId || !tenantId || !expenseDate) {
+    alert('Please fill in Property, House Type, Tenant, and Date!');
+    return;
+  }
+  
+  const total = repair + maintenance + cleaning + plumbing + electrical;
+  
+  if (total === 0) {
+    alert('Please enter at least one expense amount!');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const expenseData = {
+      property_id: propertyId,
+      house_type_id: houseTypeId,
+      tenant_id: tenantId,
+      date: expenseDate,
+      repair: repair,
+      maintenance: maintenance,
+      cleaning: cleaning,
+      plumbing: plumbing,
+      electrical: electrical,
+      total: total
+    };
+    
+    let error;
+    
+    if (editingExpenseId) {
+      // Update existing expense
+      const result = await supabase
+        .from('expenses')
+        .update(expenseData)
+        .eq('id', editingExpenseId)
+        .eq('user_id', currentUser.id);
+      error = result.error;
+      
+      alert(`✅ Expense updated successfully!\n\nTotal: Ksh ${total.toLocaleString()}\nDate: ${expenseDate}`);
+    } else {
+      // Insert new expense
+      const result = await supabase
+        .from('expenses')
+        .insert([{ ...expenseData, user_id: currentUser.id }]);
+      error = result.error;
+      
+      alert(`✅ Expense recorded successfully!\n\nTotal: Ksh ${total.toLocaleString()}\nDate: ${expenseDate}`);
+    }
+    
+    if (error) throw error;
+    
+    clearExpenseForm();
+    loadExpenses();
+    
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function clearExpenseForm() {
+  document.getElementById('expenseProperty').value = '';
+  document.getElementById('expenseHouseType').value = '';
+  document.getElementById('expenseTenant').value = '';
+  document.getElementById('expenseRepair').value = '0';
+  document.getElementById('expenseMaintenance').value = '0';
+  document.getElementById('expenseCleaning').value = '0';
+  document.getElementById('expensePlumbing').value = '0';
+  document.getElementById('expenseElectrical').value = '0';
+  document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+  
+  // Reset edit mode
+  editingExpenseId = null;
+  document.getElementById('saveExpenseBtn').innerHTML = '💾 Save Expense';
+  
+  updateExpenseTotal();
+}
+
+function renderExpenses(expenses) {
+  const tbody = document.querySelector('#expensesTable tbody');
+  tbody.innerHTML = '';
+  
+  if (expenses.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #666;">No expenses recorded. Fill in the form above to add your first expense.</td></tr>';
+    return;
+  }
+  
+  expenses.forEach(expense => {
+    const propertyName = expense.properties?.name || 'N/A';
+    const houseTypeName = expense.house_types?.type_name || 'N/A';
+    const tenantName = expense.tenants?.name || 'N/A';
+    const houseNumber = expense.tenants?.house_number || 'N/A';
+    
+    tbody.innerHTML += `<tr>
+      <td><strong>${expense.date}</strong></td>
+      <td>${propertyName}</td>
+      <td>${houseTypeName}</td>
+      <td>${tenantName}<br><small style="color:#666;">House ${houseNumber}</small></td>
+      <td>Ksh ${Number(expense.repair || 0).toLocaleString()}</td>
+      <td>Ksh ${Number(expense.maintenance || 0).toLocaleString()}</td>
+      <td>Ksh ${Number(expense.cleaning || 0).toLocaleString()}</td>
+      <td>Ksh ${Number(expense.plumbing || 0).toLocaleString()}</td>
+      <td>Ksh ${Number(expense.electrical || 0).toLocaleString()}</td>
+      <td><strong style="color:var(--red);">Ksh ${Number(expense.total || 0).toLocaleString()}</strong></td>
+      <td class="actions">
+        <button class="btn" style="padding:6px 12px;font-size:12px;" onclick="editExpense('${expense.id}')">✏️ Edit</button>
+        <button class="btn green" style="padding:6px 12px;font-size:12px;" onclick="exportExpenseToPDF('${expense.id}')">📄 PDF</button>
+        <button class="del" onclick="deleteExpense('${expense.id}')">Delete</button>
+      </td>
+    </tr>`;
+  });
+}
+
+async function deleteExpense(id) {
+  if (!confirm('Are you sure you want to delete this expense?')) return;
+  
+  try {
+    showLoading();
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.id);
+    
+    if (error) throw error;
+    
+    alert('Expense deleted successfully!');
+    loadExpenses();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editExpense(id) {
+  // Find the expense in allExpenses
+  const expense = allExpenses.find(exp => exp.id === id);
+  if (!expense) {
+    alert('Expense not found!');
+    return;
+  }
+  
+  try {
+    // Set editing mode
+    editingExpenseId = id;
+    
+    // Populate the form
+    document.getElementById('expenseProperty').value = expense.property_id;
+    
+    // Trigger property change to load house type
+    await updateExpenseHouseTypes();
+    document.getElementById('expenseHouseType').value = expense.house_type_id;
+    
+    // Trigger house type change to load tenants
+    updateExpenseTenants();
+    document.getElementById('expenseTenant').value = expense.tenant_id;
+    
+    // Fill in the amounts
+    document.getElementById('expenseDate').value = expense.date;
+    document.getElementById('expenseRepair').value = expense.repair || 0;
+    document.getElementById('expenseMaintenance').value = expense.maintenance || 0;
+    document.getElementById('expenseCleaning').value = expense.cleaning || 0;
+    document.getElementById('expensePlumbing').value = expense.plumbing || 0;
+    document.getElementById('expenseElectrical').value = expense.electrical || 0;
+    
+    // Update total display
+    updateExpenseTotal();
+    
+    // Change button text
+    document.getElementById('saveExpenseBtn').innerHTML = '✏️ Update Expense';
+    
+    // Scroll to form
+    document.querySelector('#expenses').scrollIntoView({ behavior: 'smooth' });
+    
+  } catch (error) {
+    alert('Error loading expense: ' + error.message);
+  }
+}
+
+function exportExpenseToPDF(id) {
+  // Find the expense in allExpenses
+  const expense = allExpenses.find(exp => exp.id === id);
+  if (!expense) {
+    alert('Expense not found!');
+    return;
+  }
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text('Expense Receipt', 14, 20);
+    
+    // Expense details
+    doc.setFontSize(12);
+    let y = 35;
+    
+    doc.text(`Date: ${expense.date}`, 14, y);
+    y += 10;
+    doc.text(`Property: ${expense.properties?.name || 'N/A'}`, 14, y);
+    y += 10;
+    doc.text(`House Type: ${expense.house_types?.type_name || 'N/A'}`, 14, y);
+    y += 10;
+    doc.text(`Tenant: ${expense.tenants?.name || 'N/A'}`, 14, y);
+    y += 10;
+    doc.text(`House Number: ${expense.tenants?.house_number || 'N/A'}`, 14, y);
+    
+    // Expense breakdown
+    y += 20;
+    doc.setFontSize(14);
+    doc.text('Expense Breakdown:', 14, y);
+    
+    y += 10;
+    doc.setFontSize(12);
+    
+    const items = [
+      ['Repair', expense.repair || 0],
+      ['Maintenance', expense.maintenance || 0],
+      ['Cleaning', expense.cleaning || 0],
+      ['Plumbing', expense.plumbing || 0],
+      ['Electrical', expense.electrical || 0]
+    ];
+    
+    items.forEach(([label, amount]) => {
+      if (amount > 0) {
+        doc.text(`${label}: Ksh ${Number(amount).toLocaleString()}`, 20, y);
+        y += 8;
+      }
+    });
+    
+    // Total
+    y += 10;
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL: Ksh ${Number(expense.total || 0).toLocaleString()}`, 14, y);
+    
+    // Footer
+    y += 20;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, y);
+    
+    // Save PDF
+    const fileName = `Expense_${expense.date}_${expense.properties?.name || 'Receipt'}.pdf`;
+    doc.save(fileName);
+    
+    alert('✅ Expense exported to PDF successfully!');
+    
+  } catch (error) {
+    alert('Error exporting to PDF: ' + error.message);
+  }
+}
+
+// ========== FILTER FUNCTIONALITY ==========
+
+// Store filter data globally
+let allFilterProperties = [];
+let allFilterHouseTypes = [];
+let allFilterTenants = [];
+
+async function populateExpenseFilterDropdowns() {
+  try {
+    console.log('🔍 Loading filter dropdowns...');
+    
+    // Get all properties with house type info
+    const { data: properties, error: propError } = await supabase
+      .from('properties')
+      .select('id, name, house_type_id')
+      .eq('user_id', currentUser.id)
+      .order('name');
+    
+    console.log('📊 Properties fetched:', properties, 'Error:', propError);
+    
+    // Get all house types
+    const { data: houseTypes, error: htError } = await supabase
+      .from('house_types')
+      .select('id, type_name')
+      .eq('user_id', currentUser.id)
+      .order('type_name');
+    
+    console.log('🏠 House types fetched:', houseTypes, 'Error:', htError);
+    
+    // Get all tenants with property and house type info
+    const { data: tenants, error: tenError } = await supabase
+      .from('tenants')
+      .select('id, name, property_id, house_type_id, house_number')
+      .eq('user_id', currentUser.id)
+      .order('name');
+    
+    console.log('👥 Tenants fetched:', tenants, 'Error:', tenError);
+    
+    // Store in global variables
+    allFilterProperties = properties || [];
+    allFilterHouseTypes = houseTypes || [];
+    allFilterTenants = tenants || [];
+    
+    console.log('✅ Stored - Properties:', allFilterProperties.length, 'House Types:', allFilterHouseTypes.length, 'Tenants:', allFilterTenants.length);
+    
+    // Populate property dropdown
+    const filterProperty = document.getElementById('expenseFilterProperty');
+    console.log('🔍 Property dropdown element:', filterProperty);
+    if (filterProperty) {
+      filterProperty.innerHTML = '<option value="">All Properties</option>';
+      allFilterProperties.forEach(prop => {
+        filterProperty.innerHTML += `<option value="${prop.id}">${prop.name}</option>`;
+      });
+      console.log('✅ Property dropdown populated with', allFilterProperties.length, 'options');
+    }
+    
+    // Initially show all house types
+    const filterHouseType = document.getElementById('expenseFilterHouseType');
+    console.log('🔍 House type dropdown element:', filterHouseType);
+    if (filterHouseType) {
+      filterHouseType.innerHTML = '<option value="">All House Types</option>';
+      allFilterHouseTypes.forEach(ht => {
+        filterHouseType.innerHTML += `<option value="${ht.id}">${ht.type_name}</option>`;
+      });
+      console.log('✅ House type dropdown populated with', allFilterHouseTypes.length, 'options');
+    }
+    
+    // Initially show all tenants
+    const filterTenant = document.getElementById('expenseFilterTenant');
+    console.log('🔍 Tenant dropdown element:', filterTenant);
+    if (filterTenant) {
+      filterTenant.innerHTML = '<option value="">All Tenants</option>';
+      allFilterTenants.forEach(tenant => {
+        filterTenant.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+      });
+      console.log('✅ Tenant dropdown populated with', allFilterTenants.length, 'options');
+    }
+  } catch (error) {
+    console.error('❌ Error loading filter dropdowns:', error);
+  }
+}
+
+// Update house types when property filter changes
+function updateFilterHouseTypes() {
+  const propertyId = document.getElementById('expenseFilterProperty').value;
+  const filterHouseType = document.getElementById('expenseFilterHouseType');
+  const filterTenant = document.getElementById('expenseFilterTenant');
+  
+  // Reset house type and tenant
+  filterHouseType.innerHTML = '<option value="">All House Types</option>';
+  filterTenant.innerHTML = '<option value="">All Tenants</option>';
+  
+  if (!propertyId) {
+    // Show all house types if no property selected
+    allFilterHouseTypes.forEach(ht => {
+      filterHouseType.innerHTML += `<option value="${ht.id}">${ht.type_name}</option>`;
+    });
+    // Show all tenants
+    allFilterTenants.forEach(tenant => {
+      filterTenant.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+    });
+  } else {
+    // Find house type for selected property
+    const selectedProperty = allFilterProperties.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      const houseType = allFilterHouseTypes.find(ht => ht.id === selectedProperty.house_type_id);
+      if (houseType) {
+        filterHouseType.innerHTML += `<option value="${houseType.id}">${houseType.type_name}</option>`;
+      }
+    }
+    
+    // Update tenants for this property
+    const filteredTenants = allFilterTenants.filter(t => t.property_id === propertyId);
+    filteredTenants.forEach(tenant => {
+      filterTenant.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+    });
+  }
+  
+  // Apply filter
+  filterExpenses();
+}
+
+// Update tenants when house type filter changes
+function updateFilterTenants() {
+  const propertyId = document.getElementById('expenseFilterProperty').value;
+  const houseTypeId = document.getElementById('expenseFilterHouseType').value;
+  const filterTenant = document.getElementById('expenseFilterTenant');
+  
+  // Reset tenant dropdown
+  filterTenant.innerHTML = '<option value="">All Tenants</option>';
+  
+  if (!propertyId && !houseTypeId) {
+    // Show all tenants if nothing selected
+    allFilterTenants.forEach(tenant => {
+      filterTenant.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+    });
+  } else {
+    // Filter tenants based on selections
+    let filteredTenants = allFilterTenants;
+    
+    if (propertyId) {
+      filteredTenants = filteredTenants.filter(t => t.property_id === propertyId);
+    }
+    
+    if (houseTypeId) {
+      filteredTenants = filteredTenants.filter(t => t.house_type_id === houseTypeId);
+    }
+    
+    filteredTenants.forEach(tenant => {
+      filterTenant.innerHTML += `<option value="${tenant.id}">${tenant.name} - House ${tenant.house_number}</option>`;
+    });
+  }
+  
+  // Apply filter
+  filterExpenses();
+}
+
+function filterExpenses() {
+  const filterPropertyId = document.getElementById('expenseFilterProperty')?.value;
+  const filterHouseTypeId = document.getElementById('expenseFilterHouseType')?.value;
+  const filterTenantId = document.getElementById('expenseFilterTenant')?.value;
+  
+  let filtered = allExpenses;
+  
+  // Filter by property
+  if (filterPropertyId) {
+    filtered = filtered.filter(exp => exp.property_id === filterPropertyId);
+  }
+  
+  // Filter by house type
+  if (filterHouseTypeId) {
+    filtered = filtered.filter(exp => exp.house_type_id === filterHouseTypeId);
+  }
+  
+  // Filter by tenant
+  if (filterTenantId) {
+    filtered = filtered.filter(exp => exp.tenant_id === filterTenantId);
+  }
+  
+  renderExpenses(filtered);
+}
+
+function clearExpenseFilters() {
+  const filterProperty = document.getElementById('expenseFilterProperty');
+  const filterHouseType = document.getElementById('expenseFilterHouseType');
+  const filterTenant = document.getElementById('expenseFilterTenant');
+  
+  if (filterProperty) filterProperty.value = '';
+  if (filterHouseType) filterHouseType.value = '';
+  if (filterTenant) filterTenant.value = '';
+  
+  // Reset all dropdowns to show all options
+  populateExpenseFilterDropdowns();
+  
+  renderExpenses(allExpenses);
+}
+
+// ========== END FILTER FUNCTIONALITY ==========
+
+
+async function exportExpensesData() {
+  try {
+    showLoading();
+    
+    if (allExpenses.length === 0) {
+      alert('No expenses to export');
+      return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    
+    doc.setFontSize(20);
+    doc.text('Expenses Report', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Total Expenses: ${allExpenses.length}`, 14, 35);
+    
+    const tableData = allExpenses.map(expense => [
+      expense.date,
+      expense.properties?.name || 'N/A',
+      expense.house_types?.type_name || 'N/A',
+      expense.tenants?.name || 'N/A',
+      `Ksh ${Number(expense.repair || 0).toLocaleString()}`,
+      `Ksh ${Number(expense.maintenance || 0).toLocaleString()}`,
+      `Ksh ${Number(expense.cleaning || 0).toLocaleString()}`,
+      `Ksh ${Number(expense.plumbing || 0).toLocaleString()}`,
+      `Ksh ${Number(expense.electrical || 0).toLocaleString()}`,
+      `Ksh ${Number(expense.total || 0).toLocaleString()}`
+    ]);
+    
+    doc.autoTable({
+      startY: 42,
+      head: [['Date', 'Property', 'House Type', 'Tenant', 'Repair', 'Maintenance', 'Cleaning', 'Plumbing', 'Electrical', 'Total']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [11, 11, 11] },
+      styles: { fontSize: 7 }
+    });
+    
+    const totalAmount = allExpenses.reduce((sum, exp) => sum + parseFloat(exp.total || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Grand Total: Ksh ${totalAmount.toLocaleString()}`, 14, finalY);
+    
+    doc.save(`Expenses_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    alert('✅ Expenses report exported successfully!');
+    
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
 </script>
 </body>
 </html>
