@@ -156,6 +156,17 @@
   .invoice-total .total-amount{font-size:24px;font-weight:700;color:var(--green);}
   .invoice-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
   
+  /* Email Verification Modal Styles */
+  .email-verification-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10001;align-items:center;justify-content:center;}
+  .email-verification-modal.show{display:flex;}
+  .email-verification-content{background:#fff;padding:40px;border-radius:16px;max-width:500px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;}
+  .email-verification-header{margin-bottom:30px;}
+  .success-icon{font-size:64px;margin-bottom:20px;animation:bounce 0.6s ease;}
+  @keyframes bounce{0%, 20%, 50%, 80%, 100%{transform:translateY(0)} 40%{transform:translateY(-10px)} 60%{transform:translateY(-5px)}}
+  .email-verification-header h2{margin:0 0 15px;color:var(--green);font-size:28px;}
+  .email-verification-header p{margin:0;color:#666;font-size:16px;line-height:1.5;}
+  .email-verification-actions{margin-top:20px;}
+  
   @media (max-width:768px){
     .hamburger{display:flex}
     .content{flex-direction:row}
@@ -225,6 +236,7 @@
     <div class="authCard">
       <h2>🏠 RentPoa Login</h2>
       <div id="loginError" class="error"></div>
+      <div id="loginSuccess" class="success"></div>
       <input type="email" id="loginEmail" placeholder="Email" />
       <input type="password" id="loginPassword" placeholder="Password" />
       <button class="btn" onclick="login()">Sign In</button>
@@ -851,6 +863,22 @@
     </div>
   </div>
 
+  <!-- Email Verification Success Modal -->
+  <div class="email-verification-modal" id="emailVerificationModal">
+    <div class="email-verification-content">
+      <div class="email-verification-header">
+        <div class="success-icon">✅</div>
+        <h2>Email Verified Successfully!</h2>
+        <p>Welcome to RentPoa. Your account has been verified and you are now signed in.</p>
+      </div>
+      <div class="email-verification-actions">
+        <button class="btn green" onclick="closeEmailVerificationModal()" style="width:100%;">
+          🚀 Continue to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Invoice Creation Modal -->
   <div class="invoice-modal" id="invoiceModal">
     <div class="invoice-content">
@@ -968,8 +996,133 @@ function showSuccess(elementId, message) {
   const successElement = document.getElementById(elementId);
   successElement.textContent = message;
   successElement.style.display = 'block';
-  setTimeout(() => successElement.style.display = 'none', 5000);
+  
+  // Different timeout for different message types
+  let timeout = 8000; // Default 8 seconds
+  if (elementId === 'signupSuccess') {
+    timeout = 12000; // 12 seconds for signup messages
+  }
+  setTimeout(() => successElement.style.display = 'none', timeout);
 }
+
+// Handle email verification redirect on page load
+async function handleEmailVerification() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const isEmailVerified = urlParams.get('email-verified') === 'true';
+  const isRedirected = urlParams.get('redirected') === 'true';
+  
+  if (isEmailVerified && isRedirected) {
+    console.log('📧 Email verification detected - processing...');
+    
+    try {
+      showLoading();
+      
+      // Wait a moment for auth state to update
+      setTimeout(async () => {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          hideLoading();
+          showError('loginError', 'Error verifying email. Please try signing in manually.');
+          return;
+        }
+        
+        if (session?.user) {
+          // User is now verified and signed in
+          console.log('✅ User verified and logged in:', session.user.email);
+          
+          // Set current user
+          currentUser = session.user;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          
+          // Clear the URL parameters
+          const url = new URL(window.location);
+          url.searchParams.delete('email-verified');
+          url.searchParams.delete('redirected');
+          history.replaceState({}, document.title, url.toString());
+          
+          hideLoading();
+          
+          // Show success modal
+          showEmailVerificationSuccess();
+          
+        } else {
+          // No session found, try to sign in the user automatically
+          console.log('🔄 No session found, attempting auto sign-in...');
+          
+          // Get user email from the URL or stored data
+          const userEmail = session?.user?.email || urlParams.get('email') || 'your email';
+          
+          // Since we don't have the password, we'll show instructions
+          hideLoading();
+          showEmailVerificationSuccess(true, userEmail);
+        }
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error handling email verification:', error);
+      hideLoading();
+      showError('loginError', 'Error processing email verification. Please try signing in manually.');
+    }
+  }
+}
+
+// Show email verification success modal
+function showEmailVerificationSuccess(needsManualSignIn = false, userEmail = '') {
+  const modal = document.getElementById('emailVerificationModal');
+  const content = modal.querySelector('.email-verification-content');
+  
+  if (needsManualSignIn) {
+    content.innerHTML = `
+      <div class="email-verification-header">
+        <div class="success-icon">✅</div>
+        <h2>Email Verified Successfully!</h2>
+        <p>Your email has been verified. Please sign in with your credentials to access your account.</p>
+        <p style="margin-top:15px;color:var(--blue);font-weight:600;">Email: ${userEmail}</p>
+      </div>
+      <div class="email-verification-actions">
+        <button class="btn green" onclick="closeEmailVerificationModalAndSignIn()" style="width:100%;">
+          🔐 Sign In Now
+        </button>
+      </div>
+    `;
+  }
+  
+  modal.classList.add('show');
+}
+
+// Close email verification modal and proceed to dashboard
+function closeEmailVerificationModal() {
+  const modal = document.getElementById('emailVerificationModal');
+  modal.classList.remove('show');
+  
+  // Show the main app - auth state change handler will handle this
+  console.log('🎉 Email verification completed - showing dashboard');
+}
+
+// Close email verification modal and redirect to sign in
+function closeEmailVerificationModalAndSignIn() {
+  const modal = document.getElementById('emailVerificationModal');
+  modal.classList.remove('show');
+  
+  // Show login screen
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('signupScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  
+  // Show success message on login screen
+  const loginSuccess = document.getElementById('loginSuccess');
+  if (loginSuccess) {
+    loginSuccess.textContent = '✅ Email verified successfully! You can now sign in.';
+    loginSuccess.style.display = 'block';
+  }
+}
+
+// Call email verification handler on page load
+document.addEventListener('DOMContentLoaded', function() {
+  handleEmailVerification();
+});
 
 async function login() {
   const email = document.getElementById('loginEmail').value;
@@ -985,6 +1138,7 @@ async function login() {
     const { data, error } = await supabase.auth.signInWithPassword({email, password});
     if (error) throw error;
   } catch (error) {
+    console.error('Login error:', error);
     showError('loginError', error.message);
   } finally {
     hideLoading();
@@ -1008,17 +1162,41 @@ async function signup() {
   
   try {
     showLoading();
+    
+    // Add email redirect URL to take users back to sign-in page after verification
     const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
-      options: {data: {name: name}}
+      options: {
+        data: {name: name},
+        emailRedirectTo: window.location.origin + '?email-verified=true&redirected=true'
+      }
     });
     
     if (error) throw error;
-    showSuccess('signupSuccess', 'Account created! Check your email for verification.');
+    
+    if (data.user && !data.user.email_confirmed_at) {
+      // Show success message and clear form
+      showSuccess('signupSuccess', '✅ Account created! Please check your email and click the verification link to complete your registration.');
+      // Clear form after successful signup
+      setTimeout(() => {
+        document.getElementById('signupName').value = '';
+        document.getElementById('signupEmail').value = '';
+        document.getElementById('signupPassword').value = '';
+        showError('signupError', ''); // Clear any errors
+        showSuccess('signupSuccess', ''); // Clear success message
+      }, 3000);
+    } else {
+      // User is already confirmed (auto-confirm enabled)
+      currentUser = data.user;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      showApp();
+    }
     
   } catch (error) {
+    console.error('Signup error:', error);
     showError('signupError', error.message);
+    showSuccess('signupSuccess', ''); // Clear any success messages
   } finally {
     hideLoading();
   }
@@ -3531,6 +3709,30 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   
   if (event === 'SIGNED_IN' && session) {
     currentUser = session.user;
+    
+    // Handle email verification redirect
+    if (session.user.email_confirmed_at) {
+      // Check if this is coming from email verification redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFromEmailVerification = urlParams.get('email-verified') === 'true';
+      
+      if (isFromEmailVerification) {
+        // Clear URL parameters
+        const url = new URL(window.location);
+        url.searchParams.delete('email-verified');
+        url.searchParams.delete('redirected');
+        history.replaceState({}, document.title, url.toString());
+        
+        // Store user and show success modal
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        // Delay modal to ensure UI is ready
+        setTimeout(() => {
+          showEmailVerificationSuccess();
+        }, 1000);
+      }
+    }
+    
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('signupScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
